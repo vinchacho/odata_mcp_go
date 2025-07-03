@@ -155,6 +155,7 @@ type TraceInfo struct {
 	EntityFilter     []string            `json:"entity_filter,omitempty"`
 	FunctionFilter   []string            `json:"function_filter,omitempty"`
 	Authentication   string              `json:"authentication"`
+	ReadOnlyMode     string              `json:"read_only_mode,omitempty"`
 	MetadataSummary  MetadataSummary     `json:"metadata_summary"`
 	RegisteredTools  []ToolInfo          `json:"registered_tools"`
 	TotalTools       int                 `json:"total_tools"`

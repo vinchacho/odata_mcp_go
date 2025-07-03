@@ -84,6 +84,12 @@ func init() {
 	rootCmd.Flags().IntVar(&cfg.MaxResponseSize, "max-response-size", 5*1024*1024, "Maximum response size in bytes (default: 5MB)")
 	rootCmd.Flags().IntVar(&cfg.MaxItems, "max-items", 100, "Maximum number of items in response (default: 100)")
 	
+	// Read-only mode flags
+	rootCmd.Flags().BoolVar(&cfg.ReadOnly, "read-only", false, "Read-only mode: hide all modifying operations (create, update, delete, and functions)")
+	rootCmd.Flags().BoolVar(&cfg.ReadOnly, "ro", false, "Read-only mode (shorthand for --read-only)")
+	rootCmd.Flags().BoolVar(&cfg.ReadOnlyButFunctions, "read-only-but-functions", false, "Read-only mode but allow function imports")
+	rootCmd.Flags().BoolVar(&cfg.ReadOnlyButFunctions, "robf", false, "Read-only but functions (shorthand for --read-only-but-functions)")
+	
 	// Transport options
 	rootCmd.Flags().String("transport", "stdio", "Transport type: 'stdio' or 'http' (SSE)")
 	rootCmd.Flags().String("http-addr", ":8080", "HTTP server address (used with --transport http)")
@@ -117,6 +123,21 @@ func runBridge(cmd *cobra.Command, args []string) error {
 		cfg.LegacyDates = true
 		if cfg.Verbose {
 			fmt.Fprintf(os.Stderr, "[VERBOSE] Legacy date format enabled by default for SAP compatibility. Use --no-legacy-dates to disable.\n")
+		}
+	}
+	
+	// Handle read-only mode flags
+	if cfg.ReadOnly && cfg.ReadOnlyButFunctions {
+		return fmt.Errorf("cannot use both --read-only and --read-only-but-functions flags at the same time")
+	}
+	
+	if cfg.IsReadOnly() {
+		if cfg.Verbose {
+			if cfg.ReadOnly {
+				fmt.Fprintf(os.Stderr, "[VERBOSE] Read-only mode enabled. All modifying operations (create, update, delete, and functions) will be hidden.\n")
+			} else if cfg.ReadOnlyButFunctions {
+				fmt.Fprintf(os.Stderr, "[VERBOSE] Read-only mode enabled with function exception. Create, update, and delete operations will be hidden, but function imports will be available.\n")
+			}
 		}
 	}
 

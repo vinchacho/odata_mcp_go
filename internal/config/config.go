@@ -40,6 +40,10 @@ type Config struct {
 	// Response size limits
 	MaxResponseSize int `mapstructure:"max_response_size"` // Maximum response size in bytes
 	MaxItems        int `mapstructure:"max_items"`         // Maximum number of items in response
+	
+	// Read-only mode flags
+	ReadOnly             bool `mapstructure:"read_only"`               // Read-only mode: hide all modifying operations
+	ReadOnlyButFunctions bool `mapstructure:"read_only_but_functions"` // Read-only mode but allow function imports
 }
 
 // HasBasicAuth returns true if username and password are configured
@@ -55,4 +59,14 @@ func (c *Config) HasCookieAuth() bool {
 // UsePostfix returns true if tool postfix should be used instead of prefix
 func (c *Config) UsePostfix() bool {
 	return !c.NoPostfix
+}
+
+// IsReadOnly returns true if read-only mode is enabled
+func (c *Config) IsReadOnly() bool {
+	return c.ReadOnly || c.ReadOnlyButFunctions
+}
+
+// AllowModifyingFunctions returns true if modifying function imports are allowed
+func (c *Config) AllowModifyingFunctions() bool {
+	return !c.ReadOnly
 }

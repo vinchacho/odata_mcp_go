@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -110,6 +111,13 @@ func (b *ODataMCPBridge) generateTools() error {
 	
 	for _, name := range functionNames {
 		function := b.metadata.FunctionImports[name]
+		// Skip modifying functions in read-only mode unless functions are allowed
+		if b.config.ReadOnly || (!b.config.AllowModifyingFunctions() && b.isFunctionModifying(function)) {
+			if b.config.Verbose {
+				fmt.Fprintf(os.Stderr, "[VERBOSE] Skipping function %s in read-only mode (HTTP method: %s)\n", name, function.HTTPMethod)
+			}
+			continue
+		}
 		b.generateFunctionTool(name, function)
 	}
 
@@ -164,6 +172,26 @@ func (b *ODataMCPBridge) matchesPattern(name, pattern string) bool {
 	}
 
 	return false
+}
+
+// isFunctionModifying determines if a function import performs modifying operations
+func (b *ODataMCPBridge) isFunctionModifying(function *models.FunctionImport) bool {
+	// Check HTTP method - POST is typically used for modifying operations
+	// GET is typically read-only
+	httpMethod := strings.ToUpper(function.HTTPMethod)
+	if httpMethod == "GET" {
+		return false
+	}
+	
+	// For v4, actions are typically modifying, functions are typically read-only
+	if function.IsAction {
+		return true
+	}
+	
+	// If HTTP method is POST, PUT, PATCH, DELETE, or MERGE, it's modifying
+	return httpMethod == "POST" || httpMethod == "PUT" || 
+		   httpMethod == "PATCH" || httpMethod == "DELETE" || 
+		   httpMethod == "MERGE"
 }
 
 // generateServiceInfoTool creates a tool to get service information
@@ -224,18 +252,18 @@ func (b *ODataMCPBridge) generateEntitySetTools(entitySetName string, entitySet 
 	// Generate get tool
 	b.generateGetTool(entitySetName, entitySet, entityType)
 
-	// Generate create tool if allowed
-	if entitySet.Creatable {
+	// Generate create tool if allowed and not in read-only mode
+	if entitySet.Creatable && !b.config.IsReadOnly() {
 		b.generateCreateTool(entitySetName, entitySet, entityType)
 	}
 
-	// Generate update tool if allowed
-	if entitySet.Updatable {
+	// Generate update tool if allowed and not in read-only mode
+	if entitySet.Updatable && !b.config.IsReadOnly() {
 		b.generateUpdateTool(entitySetName, entitySet, entityType)
 	}
 
-	// Generate delete tool if allowed
-	if entitySet.Deletable {
+	// Generate delete tool if allowed and not in read-only mode
+	if entitySet.Deletable && !b.config.IsReadOnly() {
 		b.generateDeleteTool(entitySetName, entitySet, entityType)
 	}
 }
@@ -782,6 +810,13 @@ func (b *ODataMCPBridge) GetTraceInfo() (*models.TraceInfo, error) {
 	if !b.config.UsePostfix() {
 		toolNaming = "Prefix"
 	}
+	
+	readOnlyMode := ""
+	if b.config.ReadOnly {
+		readOnlyMode = "Full read-only (no modifying operations)"
+	} else if b.config.ReadOnlyButFunctions {
+		readOnlyMode = "Read-only except functions"
+	}
 
 	tools := make([]models.ToolInfo, 0, len(b.tools))
 	for _, tool := range b.tools {
@@ -799,6 +834,7 @@ func (b *ODataMCPBridge) GetTraceInfo() (*models.TraceInfo, error) {
 		EntityFilter:    b.config.AllowedEntities,
 		FunctionFilter:  b.config.AllowedFunctions,
 		Authentication:  authType,
+		ReadOnlyMode:    readOnlyMode,
 		MetadataSummary: models.MetadataSummary{
 			EntityTypes:     len(b.metadata.EntityTypes),
 			EntitySets:      len(b.metadata.EntitySets),
