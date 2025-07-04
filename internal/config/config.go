@@ -1,5 +1,7 @@
 package config
 
+import "strings"
+
 // Config holds all configuration options for the OData MCP bridge
 type Config struct {
 	// Service configuration
@@ -48,6 +50,29 @@ type Config struct {
 	// Hint configuration
 	HintsFile string `mapstructure:"hints_file"` // Path to hints JSON file
 	Hint      string `mapstructure:"hint"`       // Direct hint JSON from CLI
+	
+	// AAD authentication
+	AuthAAD      bool   `mapstructure:"auth_aad"`       // Enable AAD authentication
+	AADTenant    string `mapstructure:"aad_tenant"`     // Azure AD tenant ID
+	AADClientID  string `mapstructure:"aad_client_id"`  // AAD app client ID
+	AADScopes    string `mapstructure:"aad_scopes"`     // Comma-separated scopes
+	AADCache     string `mapstructure:"aad_cache"`      // Token cache location
+	AADBrowser   bool   `mapstructure:"aad_browser"`    // Use browser-based auth flow
+	AADTrace     bool   `mapstructure:"aad_trace"`      // Enable auth tracing
+	
+	// SAML authentication
+	AuthSAMLBrowser bool `mapstructure:"auth_saml_browser"` // Use browser for SAML auth
+	
+	// Windows authentication
+	AuthWindows bool `mapstructure:"auth_windows"` // Use Windows integrated auth
+	DeferredWindowsAuth bool // Internal flag for deferred auth
+	TestAuth bool `mapstructure:"test_auth"` // Test authentication only
+	
+	// Advanced SAML authentication methods
+	AuthWebView2       bool `mapstructure:"auth_webview2"`        // Use WebView2 for SAML
+	AuthChrome         bool `mapstructure:"auth_chrome"`          // Use Chrome automation
+	AuthChromeHeadless bool `mapstructure:"auth_chrome_headless"` // Use headless Chrome
+	AuthChromeManual   bool `mapstructure:"auth_chrome_manual"`   // Use Chrome with manual confirmation
 }
 
 // HasBasicAuth returns true if username and password are configured
@@ -73,4 +98,25 @@ func (c *Config) IsReadOnly() bool {
 // AllowModifyingFunctions returns true if modifying function imports are allowed
 func (c *Config) AllowModifyingFunctions() bool {
 	return !c.ReadOnly
+}
+
+// HasAADAuth returns true if AAD authentication is configured
+func (c *Config) HasAADAuth() bool {
+	return c.AuthAAD
+}
+
+// GetAADScopes returns the parsed AAD scopes
+func (c *Config) GetAADScopes() []string {
+	if c.AADScopes == "" {
+		return []string{}
+	}
+	
+	var scopes []string
+	for _, scope := range strings.Split(c.AADScopes, ",") {
+		scope = strings.TrimSpace(scope)
+		if scope != "" {
+			scopes = append(scopes, scope)
+		}
+	}
+	return scopes
 }

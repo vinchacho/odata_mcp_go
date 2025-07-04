@@ -5,15 +5,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/zmcp/odata-mcp/internal/auth"
 	"github.com/zmcp/odata-mcp/internal/bridge"
 	"github.com/zmcp/odata-mcp/internal/config"
 	"github.com/zmcp/odata-mcp/internal/debug"
@@ -56,6 +59,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&cfg.Password, "password", "p", "", "Password for basic authentication (overrides ODATA_PASSWORD env var)")
 	rootCmd.Flags().StringVar(&cfg.Password, "pass", "", "Password for basic authentication (alias for --password)")
 	rootCmd.Flags().StringVar(&cfg.CookieFile, "cookie-file", "", "Path to cookie file in Netscape format")
+	rootCmd.Flags().StringVar(&cfg.CookieFile, "cookies", "", "Path to cookie file in Netscape format (alias for --cookie-file)")
 	rootCmd.Flags().StringVar(&cfg.CookieString, "cookie-string", "", "Cookie string (key1=val1; key2=val2)")
 
 	// Tool naming options
@@ -97,10 +101,26 @@ func init() {
 	
 	// Debug options
 	rootCmd.Flags().Bool("trace-mcp", false, "Enable trace logging to debug MCP communication")
+	rootCmd.Flags().BoolVar(&cfg.TestAuth, "test-auth", false, "Test authentication only (exit after auth)")
 	
 	// Hint options
 	rootCmd.Flags().StringVar(&cfg.HintsFile, "hints-file", "", "Path to hints JSON file (defaults to hints.json in same directory as binary)")
 	rootCmd.Flags().StringVar(&cfg.Hint, "hint", "", "Direct hint JSON or text to inject into service info")
+	
+	// AAD authentication options
+	rootCmd.Flags().BoolVar(&cfg.AuthAAD, "auth-aad", false, "Use Azure AD authentication")
+	rootCmd.Flags().StringVar(&cfg.AADTenant, "aad-tenant", "common", "Azure AD tenant ID (default: common)")
+	rootCmd.Flags().StringVar(&cfg.AADClientID, "aad-client-id", "", "Azure AD application (client) ID")
+	rootCmd.Flags().StringVar(&cfg.AADScopes, "aad-scopes", "", "Comma-separated OAuth2 scopes (default: service URL + /.default)")
+	rootCmd.Flags().StringVar(&cfg.AADCache, "aad-cache", "", "Token cache location (default: OS secure storage)")
+	rootCmd.Flags().BoolVar(&cfg.AADBrowser, "aad-browser", false, "Use browser-based authentication instead of device code")
+	rootCmd.Flags().BoolVar(&cfg.AADTrace, "aad-trace", false, "Enable detailed authentication tracing for debugging")
+	rootCmd.Flags().BoolVar(&cfg.AuthSAMLBrowser, "auth-saml-browser", false, "Use browser for SAML authentication (shows manual cookie extraction steps)")
+	rootCmd.Flags().BoolVar(&cfg.AuthWindows, "auth-windows", false, "Use Windows integrated authentication with PowerShell (Windows only)")
+	rootCmd.Flags().BoolVar(&cfg.AuthWebView2, "auth-webview2", false, "Use WebView2 (Edge) for SAML authentication (Windows only)")
+	rootCmd.Flags().BoolVar(&cfg.AuthChrome, "auth-chrome", false, "Use Chrome automation for SAML authentication")
+	rootCmd.Flags().BoolVar(&cfg.AuthChromeHeadless, "auth-chrome-headless", false, "Use headless Chrome for SAML authentication")
+	rootCmd.Flags().BoolVar(&cfg.AuthChromeManual, "auth-chrome-manual", false, "Use Chrome with manual confirmation for SAML authentication")
 
 	// Bind flags to viper for environment variable support
 	viper.BindPFlag("service", rootCmd.Flags().Lookup("service"))
@@ -286,9 +306,55 @@ func processAuthentication(cfg *config.Config) error {
 	if cfg.Username != "" {
 		authMethods++
 	}
+	if cfg.AuthAAD {
+		authMethods++
+	}
+	if cfg.AuthSAMLBrowser {
+		authMethods++
+	}
+	if cfg.AuthWindows {
+		authMethods++
+	}
+	if cfg.AuthWebView2 {
+		authMethods++
+	}
+	if cfg.AuthChrome {
+		authMethods++
+	}
+	if cfg.AuthChromeHeadless {
+		authMethods++
+	}
+	if cfg.AuthChromeManual {
+		authMethods++
+	}
 
 	if authMethods > 1 {
 		return fmt.Errorf("only one authentication method can be used at a time")
+	}
+	
+	// Handle AAD authentication
+	if cfg.AuthAAD {
+		return processAADAuthentication(cfg)
+	}
+	
+	// Handle SAML browser authentication
+	if cfg.AuthSAMLBrowser {
+		return processSAMLBrowserAuthentication(cfg)
+	}
+	
+	// Handle Windows integrated authentication
+	if cfg.AuthWindows {
+		return processWindowsAuthentication(cfg)
+	}
+	
+	// Handle WebView2 authentication
+	if cfg.AuthWebView2 {
+		return processWebView2Authentication(cfg)
+	}
+	
+	// Handle Chrome authentication
+	if cfg.AuthChrome || cfg.AuthChromeHeadless || cfg.AuthChromeManual {
+		return processChromeAuthentication(cfg)
 	}
 
 	// Process cookie file authentication
@@ -457,6 +523,329 @@ func printTraceInfo(bridge *bridge.ODataMCPBridge) error {
 	fmt.Println(strings.Repeat("=", 80))
 
 	return nil
+}
+
+func processAADAuthentication(cfg *config.Config) error {
+	// Set default client ID if not provided
+	if cfg.AADClientID == "" {
+		// This is a well-known client ID for Azure CLI / development
+		// In production, users should register their own app
+		cfg.AADClientID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46" // Azure CLI client ID
+		if cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Using default Azure CLI client ID for AAD authentication\n")
+		}
+	}
+	
+	// Create AAD config
+	aadConfig := &auth.AADConfig{
+		TenantID:      cfg.AADTenant,
+		ClientID:      cfg.AADClientID,
+		CacheLocation: cfg.AADCache,
+	}
+	
+	// Validate AAD config
+	if err := aadConfig.Validate(); err != nil {
+		return fmt.Errorf("invalid AAD configuration: %w", err)
+	}
+	
+	// Set scopes - use provided or default to service URL
+	scopes := cfg.GetAADScopes()
+	if len(scopes) == 0 {
+		scopes = aadConfig.GetDefaultScopes(cfg.ServiceURL)
+		if cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Using default AAD scope: %v\n", scopes)
+		}
+	}
+	aadConfig.Scopes = scopes
+	
+	// Create AAD auth provider
+	authProvider, err := auth.NewAADAuthProvider(aadConfig, cfg.Verbose)
+	if err != nil {
+		return fmt.Errorf("failed to create AAD auth provider: %w", err)
+	}
+	
+	// Enable tracing if requested
+	if cfg.AADTrace {
+		if err := authProvider.EnableTracing(); err != nil {
+			return fmt.Errorf("failed to enable auth tracing: %w", err)
+		}
+		defer authProvider.DisableTracing()
+	}
+	
+	// Perform authentication
+	ctx := context.Background()
+	var token *auth.AADToken
+	
+	if cfg.AADBrowser {
+		if cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Using browser-based authentication flow\n")
+		}
+		token, err = authProvider.AuthenticateBrowser(ctx, scopes)
+	} else {
+		if cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Using device code authentication flow\n")
+		}
+		token, err = authProvider.AuthenticateDeviceCode(ctx, scopes)
+	}
+	
+	if err != nil {
+		return fmt.Errorf("AAD authentication failed: %w", err)
+	}
+	
+	// Exchange token for SAP cookies
+	sapCookies, err := authProvider.ExchangeTokenForSAPCookies(ctx, token, cfg.ServiceURL)
+	if err != nil {
+		return fmt.Errorf("failed to exchange AAD token for SAP cookies: %w", err)
+	}
+	
+	// Set cookies in config
+	cfg.Cookies = sapCookies.Cookies
+	
+	if cfg.Verbose {
+		fmt.Fprintf(os.Stderr, "[VERBOSE] AAD authentication successful. Acquired %d cookies\n", len(cfg.Cookies))
+		if sapCookies.MYSAPSSO2 != "" {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] MYSAPSSO2 cookie acquired\n")
+		}
+	}
+	
+	return nil
+}
+
+func processSAMLBrowserAuthentication(cfg *config.Config) error {
+	if cfg.Verbose {
+		fmt.Fprintf(os.Stderr, "[VERBOSE] Using SAML browser authentication\n")
+	}
+	
+	// Create SAML browser authenticator
+	samlAuth := auth.NewSAMLBrowserAuth(cfg.ServiceURL, cfg.Verbose)
+	
+	// Enable tracing if requested
+	if cfg.AADTrace {
+		if err := samlAuth.EnableTracing(); err != nil {
+			return fmt.Errorf("failed to enable tracing: %w", err)
+		}
+		defer samlAuth.DisableTracing()
+	}
+	
+	// Perform authentication and get instructions
+	ctx := context.Background()
+	_, err := samlAuth.AuthenticateAndExtractCookies(ctx)
+	if err != nil {
+		return fmt.Errorf("SAML browser authentication failed: %w", err)
+	}
+	
+	// Exit after showing instructions
+	fmt.Println("\nPlease run odata-mcp again with the extracted cookies.")
+	os.Exit(0)
+	return nil
+}
+
+func processWindowsAuthentication(cfg *config.Config) error {
+	if cfg.Verbose {
+		fmt.Fprintf(os.Stderr, "[VERBOSE] Using Windows integrated authentication\n")
+	}
+	
+	// Check if we're in test-auth mode
+	if cfg.TestAuth {
+		// Perform authentication immediately for testing
+		fmt.Fprintf(os.Stderr, "[INFO] Running authentication test...\n")
+		
+		psAuth := auth.NewPowerShellAuth(cfg.ServiceURL, cfg.Verbose)
+		ctx := context.Background()
+		
+		startTime := time.Now()
+		cookies, err := psAuth.Authenticate(ctx)
+		duration := time.Since(startTime)
+		
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "\n[ERROR] Authentication failed after %v: %v\n", duration, err)
+			return err
+		}
+		
+		fmt.Fprintf(os.Stderr, "\n[SUCCESS] Authentication completed in %v\n", duration)
+		fmt.Fprintf(os.Stderr, "Acquired %d cookies:\n", len(cookies))
+		for name, value := range cookies {
+			// Show first and last 10 chars of cookie value for security
+			displayValue := value
+			if len(value) > 20 {
+				displayValue = value[:10] + "..." + value[len(value)-10:]
+			}
+			fmt.Fprintf(os.Stderr, "  - %s: %s\n", name, displayValue)
+		}
+		
+		// Optionally save cookies
+		if cfg.CookieFile != "" {
+			fmt.Fprintf(os.Stderr, "\nSaving cookies to: %s\n", cfg.CookieFile)
+			if err := auth.SaveCookiesToFile(cookies, cfg.ServiceURL, cfg.CookieFile); err != nil {
+				fmt.Fprintf(os.Stderr, "[ERROR] Failed to save cookies: %v\n", err)
+			} else {
+				fmt.Fprintf(os.Stderr, "[SUCCESS] Cookies saved successfully\n")
+				fmt.Fprintf(os.Stderr, "\nYou can now use:\n")
+				fmt.Fprintf(os.Stderr, "odata-mcp --cookies \"%s\" --service \"%s\"\n", cfg.CookieFile, cfg.ServiceURL)
+			}
+		} else {
+			fmt.Fprintf(os.Stderr, "\nTo save cookies, use: --test-auth --cookies <file>\n")
+		}
+		
+		// Exit after test
+		os.Exit(0)
+	}
+	
+	// For MCP compatibility, we need to handle auth AFTER initialization
+	// So we'll just validate here and do actual auth when first tool is called
+	fmt.Fprintf(os.Stderr, "[INFO] Windows authentication will be performed on first request\n")
+	
+	// Mark that we need Windows auth
+	cfg.DeferredWindowsAuth = true
+	
+	return nil
+}
+
+func processWebView2Authentication(cfg *config.Config) error {
+	if cfg.Verbose {
+		fmt.Fprintf(os.Stderr, "[VERBOSE] Using WebView2 (Edge) authentication\n")
+	}
+	
+	
+	// Try simple WebView2 implementation
+	webviewAuth := auth.NewSimpleWebView2Auth(cfg.ServiceURL, cfg.Verbose)
+	
+	// Perform authentication
+	ctx := context.Background()
+	cookies, err := webviewAuth.Authenticate(ctx)
+	if err != nil {
+		return fmt.Errorf("WebView2 authentication failed: %w", err)
+	}
+	
+	// Set cookies in config
+	cfg.Cookies = cookies
+	
+	if cfg.Verbose {
+		fmt.Fprintf(os.Stderr, "[VERBOSE] WebView2 authentication successful. Acquired %d cookies\n", len(cookies))
+		if _, ok := cookies["MYSAPSSO2"]; ok {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] MYSAPSSO2 cookie acquired\n")
+		}
+	}
+	
+	// Check if we're in test mode
+	if cfg.TestAuth {
+		fmt.Fprintf(os.Stderr, "\n[SUCCESS] Authentication test completed\n")
+		fmt.Fprintf(os.Stderr, "Acquired %d cookies:\n", len(cookies))
+		for name, value := range cookies {
+			displayValue := value
+			if len(value) > 20 {
+				displayValue = value[:10] + "..." + value[len(value)-10:]
+			}
+			fmt.Fprintf(os.Stderr, "  - %s: %s\n", name, displayValue)
+		}
+		os.Exit(0)
+	}
+	
+	return nil
+}
+
+func processChromeAuthentication(cfg *config.Config) error {
+	if cfg.AuthChromeManual {
+		if cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Using Chrome manual authentication\n")
+		}
+		
+		// Create manual Chrome authenticator
+		chromeAuth := auth.NewChromeManualAuth(cfg.ServiceURL, cfg.Verbose)
+		
+		// Perform authentication
+		ctx := context.Background()
+		cookies, err := chromeAuth.Authenticate(ctx)
+		if err != nil {
+			return fmt.Errorf("Chrome manual authentication failed: %w", err)
+		}
+		
+		// Set cookies in config
+		cfg.Cookies = cookies
+		
+		if cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Chrome manual authentication successful. Acquired %d cookies\n", len(cookies))
+			if _, ok := cookies["MYSAPSSO2"]; ok {
+				fmt.Fprintf(os.Stderr, "[VERBOSE] MYSAPSSO2 cookie acquired\n")
+			}
+		}
+		
+		// Handle test mode
+		if cfg.TestAuth {
+			handleTestAuthSuccess(cfg, cookies)
+		}
+		
+		return nil
+	}
+	
+	// Regular Chrome automation
+	headless := cfg.AuthChromeHeadless
+	
+	if cfg.Verbose {
+		if headless {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Using headless Chrome authentication\n")
+		} else {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Using Chrome authentication (visible browser)\n")
+		}
+	}
+	
+	// Create ChromeDP authenticator
+	chromeAuth := auth.NewChromeDPAuth(cfg.ServiceURL, cfg.Verbose, headless)
+	
+	// Perform authentication
+	ctx := context.Background()
+	cookies, err := chromeAuth.Authenticate(ctx)
+	if err != nil {
+		return fmt.Errorf("Chrome authentication failed: %w", err)
+	}
+	
+	// Set cookies in config
+	cfg.Cookies = cookies
+	
+	if cfg.Verbose {
+		fmt.Fprintf(os.Stderr, "[VERBOSE] Chrome authentication successful. Acquired %d cookies\n", len(cookies))
+		if _, ok := cookies["MYSAPSSO2"]; ok {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] MYSAPSSO2 cookie acquired\n")
+		}
+	}
+	
+	// Check if we're in test mode
+	if cfg.TestAuth {
+		handleTestAuthSuccess(cfg, cookies)
+	}
+	
+	return nil
+}
+
+func handleTestAuthSuccess(cfg *config.Config, cookies map[string]string) {
+	fmt.Fprintf(os.Stderr, "\n[SUCCESS] Authentication test completed\n")
+	fmt.Fprintf(os.Stderr, "Acquired %d cookies:\n", len(cookies))
+	for name, value := range cookies {
+		displayValue := value
+		if len(value) > 20 {
+			displayValue = value[:10] + "..." + value[len(value)-10:]
+		}
+		fmt.Fprintf(os.Stderr, "  - %s: %s\n", name, displayValue)
+	}
+	
+	// Optionally save cookies
+	if cfg.CookieFile != "" {
+		fmt.Fprintf(os.Stderr, "\nSaving cookies to: %s\n", cfg.CookieFile)
+		// Get domain from service URL
+		domain := cfg.ServiceURL
+		if u, err := url.Parse(cfg.ServiceURL); err == nil {
+			domain = u.Host
+		}
+		if err := auth.SaveCookiesToFile(cookies, domain, cfg.CookieFile); err != nil {
+			fmt.Fprintf(os.Stderr, "[ERROR] Failed to save cookies: %v\n", err)
+		} else {
+			fmt.Fprintf(os.Stderr, "[SUCCESS] Cookies saved successfully\n")
+			fmt.Fprintf(os.Stderr, "\nYou can now use:\n")
+			fmt.Fprintf(os.Stderr, "odata-mcp --cookies \"%s\" --service \"%s\"\n", cfg.CookieFile, cfg.ServiceURL)
+		}
+	}
+	
+	os.Exit(0)
 }
 
 func main() {

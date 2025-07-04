@@ -20,7 +20,10 @@ make build
 # Anonymous access
 ./odata-mcp https://services.odata.org/V2/Northwind/Northwind.svc/
 
-# With authentication
+# Azure AD authentication (recommended for corporate)
+./odata-mcp --auth-aad https://sap-server.company.com/odata/
+
+# Basic authentication
 ./odata-mcp --user admin --password secret https://my-service.com/odata/
 
 # Using environment variables
@@ -33,6 +36,9 @@ export ODATA_PASSWORD=secret
 ## Common Flags
 
 ### Authentication
+- `--auth-aad` - Use Azure AD authentication
+- `--aad-tenant` - Azure AD tenant ID (default: common)
+- `--aad-client-id` - AAD app registration ID
 - `-u, --user` - Username for basic auth
 - `-p, --password` - Password for basic auth  
 - `--cookie-file` - Path to cookie file
@@ -106,6 +112,25 @@ Location by platform:
                 "ODATA_USERNAME": "api_user",
                 "ODATA_PASSWORD": "api_password"
             }
+        }
+    }
+}
+```
+
+### AAD Authentication Configuration
+
+```json
+{
+    "mcpServers": {
+        "sap-federated": {
+            "command": "/usr/local/bin/odata-mcp",
+            "args": [
+                "--service", "https://sap.company.com/odata/",
+                "--auth-aad",
+                "--aad-tenant", "company.com",
+                "--read-only",
+                "--tool-shrink"
+            ]
         }
     }
 }

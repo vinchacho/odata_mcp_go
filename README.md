@@ -8,7 +8,7 @@ This is a Go port of the Python OData-MCP bridge implementation, designed to be 
 
 - **Universal OData Support**: Works with both OData v2 and v4 services
 - **Dynamic Tool Generation**: Automatically creates MCP tools based on OData metadata
-- **Multiple Authentication Methods**: Basic auth, cookie auth, and anonymous access
+- **Multiple Authentication Methods**: Azure AD (AAD), basic auth, cookie auth, and anonymous access
 - **SAP OData Extensions**: Full support for SAP-specific OData features including CSRF tokens
 - **Comprehensive CRUD Operations**: Generated tools for create, read, update, delete operations
 - **Advanced Query Support**: OData query options ($filter, $select, $expand, $orderby, etc.)
@@ -327,20 +327,55 @@ export ODATA_SERVICE_URL=https://services.odata.org/V2/Northwind/Northwind.svc/
 ### Authentication
 
 ```bash
+# Azure AD authentication (OAuth2 flow)
+./odata-mcp --auth-aad https://sap-server.company.com/odata/
+# Follow the device code instructions to authenticate with your corporate account
+
+# Azure AD with browser-based authentication
+./odata-mcp --auth-aad --aad-browser https://sap-server.company.com/odata/
+
+# Azure AD with custom tenant and client ID
+./odata-mcp --auth-aad --aad-tenant contoso.com --aad-client-id your-app-id https://sap-server.company.com/odata/
+
+# SAML-based authentication (for systems that don't support OAuth2)
+./odata-mcp --auth-saml-browser https://sap-server.company.com/odata/
+# Opens browser for authentication and provides cookie extraction instructions
+
+# Windows integrated authentication (Windows only, automatic)
+./odata-mcp --auth-windows https://sap-server.company.com/odata/
+# Uses PowerShell with Windows credentials for automatic authentication
+
+# Advanced SAML authentication with WebView2 (Windows only)
+./odata-mcp --auth-webview2 https://sap-server.company.com/odata/
+# Uses embedded Edge browser for fully automated SAML authentication
+
+# Chrome automation for SAML (cross-platform)
+./odata-mcp --auth-chrome https://sap-server.company.com/odata/
+# Opens Chrome browser and automatically captures cookies after SAML login
+
+# Headless Chrome for automation scenarios
+./odata-mcp --auth-chrome-headless https://sap-server.company.com/odata/
+# Runs Chrome in headless mode for automated SAML authentication
+
 # Basic authentication
 ./odata-mcp --user admin --password secret https://my-service.com/odata/
 
-# Cookie file authentication
+# Cookie file authentication (works with SAML systems)
 ./odata-mcp --cookie-file cookies.txt https://my-service.com/odata/
+# Or use the shorter alias
+./odata-mcp --cookies cookies.txt https://my-service.com/odata/
 
 # Cookie string authentication  
-./odata-mcp --cookie-string "session=abc123; token=xyz789" https://my-service.com/odata/
+./odata-mcp --cookie-string "MYSAPSSO2=abc123; SAP_SESSIONID=xyz789" https://my-service.com/odata/
 
 # Environment variables
 export ODATA_USERNAME=admin
 export ODATA_PASSWORD=secret
 ./odata-mcp https://my-service.com/odata/
 ```
+
+For detailed SAML authentication instructions, see [SAML Authentication Guide](docs/SAML_AUTHENTICATION.md).
+For advanced automated SAML methods, see [Advanced SAML Authentication](docs/ADVANCED_SAML_AUTH.md).
 
 ### Tool Naming Options
 
@@ -436,6 +471,11 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `--read-only-but-functions, -robf` | Hide create/update/delete but allow functions | `false` |
 | `--hints-file` | Path to hints JSON file | `hints.json` in binary dir |
 | `--hint` | Direct hint JSON or text from CLI | |
+| `--auth-aad` | Use Azure AD authentication | `false` |
+| `--aad-tenant` | Azure AD tenant ID | `common` |
+| `--aad-client-id` | AAD application client ID | Azure CLI default |
+| `--aad-scopes` | OAuth2 scopes (comma-separated) | `<service>/.default` |
+| `--aad-cache` | Token cache location | OS default cache |
 | `--transport` | Transport type: 'stdio' or 'http' | `stdio` |
 | `--http-addr` | HTTP server address (with --transport http) | `:8080` |
 | `--legacy-dates` | Enable legacy date format conversion | `true` |
@@ -656,6 +696,56 @@ Hints appear in the `odata_service_info` tool response under `implementation_hin
   }
 }
 ```
+
+## Azure AD Authentication
+
+The OData MCP bridge supports Azure Active Directory (AAD) authentication for enterprise environments where SAP or other OData services are integrated with Microsoft identity platform.
+
+### Benefits
+
+- **Single Sign-On (SSO)**: Use your corporate Microsoft account
+- **No Password Storage**: No need to manage or store SAP passwords
+- **Multi-Factor Authentication**: Inherits your organization's MFA policies
+- **Token Management**: Automatic token refresh and secure caching
+
+### Usage
+
+```bash
+# Basic AAD authentication (uses device code flow)
+./odata-mcp --auth-aad https://sap-server.company.com/odata/
+
+# With specific tenant
+./odata-mcp --auth-aad --aad-tenant contoso.com https://sap-server.company.com/odata/
+
+# With custom app registration
+./odata-mcp --auth-aad --aad-client-id your-app-id --aad-tenant your-tenant.com https://sap-server.company.com/odata/
+
+# Specify custom scopes
+./odata-mcp --auth-aad --aad-scopes "https://sap.company.com/.default,offline_access" https://sap-server.company.com/odata/
+```
+
+### How It Works
+
+1. **Device Code Flow**: When you run with `--auth-aad`, you'll receive a code to enter at https://microsoft.com/devicelogin
+2. **Browser Authentication**: Complete authentication in your browser (supports MFA)
+3. **Token Exchange**: The AAD token is exchanged for SAP session cookies (MYSAPSSO2)
+4. **Secure Caching**: Tokens are cached securely for subsequent runs
+
+### Configuration
+
+By default, the bridge uses the Azure CLI client ID for authentication. For production use, register your own application in Azure AD:
+
+1. Register an app in Azure Portal
+2. Add required API permissions for your SAP system
+3. Use the client ID with `--aad-client-id`
+
+### Token Cache
+
+Tokens are cached by default in:
+- Windows: `%APPDATA%\odata-mcp\tokens.json`
+- Linux/macOS: `~/.cache/odata-mcp/tokens.json`
+
+Use `--aad-cache` to specify a custom location.
 
 ## Security
 

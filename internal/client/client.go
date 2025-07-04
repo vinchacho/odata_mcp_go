@@ -24,6 +24,7 @@ type ODataClient struct {
 	cookies        map[string]string
 	username       string
 	password       string
+	bearerToken    string         // AAD Bearer token
 	csrfToken      string
 	verbose        bool
 	sessionCookies []*http.Cookie // Track session cookies from server
@@ -58,6 +59,11 @@ func (c *ODataClient) SetCookies(cookies map[string]string) {
 	c.cookies = cookies
 }
 
+// SetBearerToken configures bearer token authentication (e.g., from AAD)
+func (c *ODataClient) SetBearerToken(token string) {
+	c.bearerToken = token
+}
+
 // buildRequest creates an HTTP request with proper headers and authentication
 func (c *ODataClient) buildRequest(ctx context.Context, method, endpoint string, body io.Reader) (*http.Request, error) {
 	fullURL := c.baseURL + strings.TrimPrefix(endpoint, "/")
@@ -76,7 +82,10 @@ func (c *ODataClient) buildRequest(ctx context.Context, method, endpoint string,
 	}
 
 	// Set authentication
-	if c.username != "" && c.password != "" {
+	if c.bearerToken != "" {
+		// Bearer token takes precedence (e.g., from AAD)
+		req.Header.Set("Authorization", "Bearer "+c.bearerToken)
+	} else if c.username != "" && c.password != "" {
 		req.SetBasicAuth(c.username, c.password)
 	}
 

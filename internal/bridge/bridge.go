@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/zmcp/odata-mcp/internal/auth"
 	"github.com/zmcp/odata-mcp/internal/client"
 	"github.com/zmcp/odata-mcp/internal/config"
 	"github.com/zmcp/odata-mcp/internal/constants"
@@ -30,6 +31,7 @@ type ODataMCPBridge struct {
 	mu          sync.RWMutex
 	running     bool
 	stopChan    chan struct{}
+	authOnce    *sync.Once
 }
 
 // NewODataMCPBridge creates a new bridge instance
@@ -73,6 +75,7 @@ func NewODataMCPBridge(cfg *config.Config) (*ODataMCPBridge, error) {
 		tools:       make(map[string]*models.ToolInfo),
 		hintManager: hintMgr,
 		stopChan:    make(chan struct{}),
+		authOnce:    &sync.Once{},
 	}
 
 	// Initialize metadata and tools
@@ -101,6 +104,39 @@ func (b *ODataMCPBridge) initialize() error {
 	}
 
 	return nil
+}
+
+// performDeferredAuth performs deferred Windows authentication if needed
+func (b *ODataMCPBridge) performDeferredAuth() error {
+	if !b.config.DeferredWindowsAuth {
+		return nil
+	}
+	
+	var authErr error
+	b.authOnce.Do(func() {
+		if b.config.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Performing deferred Windows authentication\n")
+		}
+		
+		// Create PowerShell authenticator
+		psAuth := auth.NewPowerShellAuth(b.config.ServiceURL, b.config.Verbose)
+		
+		ctx := context.Background()
+		cookies, err := psAuth.Authenticate(ctx)
+		if err != nil {
+			authErr = fmt.Errorf("deferred Windows authentication failed: %w", err)
+			return
+		}
+		
+		// Set cookies on the client
+		b.client.SetCookies(cookies)
+		
+		if b.config.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Deferred Windows authentication successful. Acquired %d cookies\n", len(cookies))
+		}
+	})
+	
+	return authErr
 }
 
 // generateTools creates MCP tools based on metadata
