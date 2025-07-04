@@ -16,6 +16,11 @@ This is a Go port of the Python OData-MCP bridge implementation, designed to be 
 - **Flexible Tool Naming**: Configurable tool naming with prefix/postfix options
 - **Entity Filtering**: Selective tool generation with wildcard support
 - **Cross-Platform**: Native Go binary for easy deployment on any OS
+- **Read-Only Modes**: Restrict operations with `--read-only` or `--read-only-but-functions`
+- **MCP Protocol Debugging**: Built-in trace logging with `--trace-mcp` for troubleshooting
+- **Service-Specific Hints**: Automatic detection and hints for known problematic services
+- **Full MCP Compliance**: Complete protocol implementation for all MCP clients
+- **Multiple Transports**: Support for stdio (default) and HTTP/SSE transports
 
 ## Installation
 
@@ -211,6 +216,36 @@ The Claude Desktop configuration file location varies by platform:
 
 **Note:** Claude Desktop does not currently support API key authentication for MCP servers. All MCP servers run locally with the same permissions as Claude Desktop itself.
 
+#### Read-Only Configuration Examples
+
+```json
+{
+    "mcpServers": {
+        "production-readonly": {
+            "command": "/usr/local/bin/odata-mcp",
+            "args": [
+                "--service",
+                "https://production.company.com/odata/",
+                "--read-only",
+                "--tool-shrink"
+            ],
+            "env": {
+                "ODATA_USERNAME": "readonly_user",
+                "ODATA_PASSWORD": "readonly_pass"
+            }
+        },
+        "dev-with-functions": {
+            "command": "/usr/local/bin/odata-mcp",
+            "args": [
+                "--service", 
+                "https://dev.company.com/odata/",
+                "--read-only-but-functions",
+                "--trace-mcp"  // Enable debugging
+            ]
+        }
+    }
+}
+
 ### Transport Options
 
 The OData MCP bridge supports two transport mechanisms:
@@ -330,6 +365,18 @@ export ODATA_PASSWORD=secret
 ./odata-mcp --functions "Get*,Create*" https://my-service.com/odata/
 ```
 
+### Read-Only Modes
+
+```bash
+# Hide all modifying operations (create, update, delete, and functions)
+./odata-mcp --read-only https://my-service.com/odata/
+./odata-mcp -ro https://my-service.com/odata/  # Short form
+
+# Hide create/update/delete but allow function imports
+./odata-mcp --read-only-but-functions https://my-service.com/odata/
+./odata-mcp -robf https://my-service.com/odata/  # Short form
+```
+
 ### Debugging and Inspection
 
 ```bash
@@ -338,6 +385,11 @@ export ODATA_PASSWORD=secret
 
 # Trace mode - show all tools without starting server
 ./odata-mcp --trace https://my-service.com/odata/
+
+# Enable MCP protocol trace logging (saves to temp directory)
+./odata-mcp --trace-mcp https://my-service.com/odata/
+# Linux/WSL: /tmp/mcp_trace_*.log
+# Windows: %TEMP%\mcp_trace_*.log
 ```
 
 ## Configuration
@@ -361,6 +413,19 @@ export ODATA_PASSWORD=secret
 | `-v, --verbose` | Enable verbose output | `false` |
 | `--debug` | Alias for --verbose | `false` |
 | `--trace` | Show tools and exit (debug mode) | `false` |
+| `--trace-mcp` | Enable MCP protocol trace logging | `false` |
+| `--read-only, -ro` | Hide all modifying operations | `false` |
+| `--read-only-but-functions, -robf` | Hide create/update/delete but allow functions | `false` |
+| `--transport` | Transport type: 'stdio' or 'http' | `stdio` |
+| `--http-addr` | HTTP server address (with --transport http) | `:8080` |
+| `--legacy-dates` | Enable legacy date format conversion | `true` |
+| `--no-legacy-dates` | Disable legacy date format conversion | `false` |
+| `--convert-dates-from-sap` | Convert SAP date formats in responses | `false` |
+| `--response-metadata` | Include __metadata blocks in responses | `false` |
+| `--pagination-hints` | Add pagination information to responses | `false` |
+| `--max-response-size` | Maximum response size in bytes | `5MB` |
+| `--max-items` | Maximum number of items in response | `100` |
+| `--verbose-errors` | Provide detailed error context | `false` |
 
 ### Environment Variables
 
@@ -476,6 +541,34 @@ See [VERSIONING.md](VERSIONING.md) for detailed versioning guide.
 
 This project uses automated GitHub Actions for releases. See [RELEASING.md](RELEASING.md) for the release process.
 
+## Troubleshooting
+
+### MCP Client Issues
+
+If you're experiencing issues with MCP clients (Claude Desktop, RooCode, GitHub Copilot):
+
+1. **Enable trace logging** to diagnose protocol issues:
+   ```bash
+   ./odata-mcp --trace-mcp https://my-service.com/odata/
+   ```
+   Then check the trace file in your temp directory.
+
+2. **Common issues and solutions**:
+   - **Tools not appearing**: Ensure the service URL is correct and accessible
+   - **Validation errors**: Update to the latest version which includes MCP compliance fixes
+   - **Connection failures**: Check authentication credentials and network connectivity
+
+3. **Service-specific hints**: The `odata_service_info` tool now includes automatic hints for known problematic services
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed troubleshooting guide.
+
+### Known Service Issues
+
+Some OData services have implementation quirks. The bridge automatically detects and provides hints for:
+
+- **SAP PO Tracking Service** (`SRA020_PO_TRACKING_SRV`): Special handling for PONumber field formatting
+- More services will be added based on user reports
+
 ## Security
 
 This project includes comprehensive security measures to prevent credential leaks. See [SECURITY.md](SECURITY.md) for details.
@@ -485,6 +578,21 @@ This project includes comprehensive security measures to prevent credential leak
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
+
+### Development
+
+For development setup and testing:
+
+```bash
+# Run tests
+make test
+
+# Run with verbose output for debugging
+./odata-mcp --verbose --trace-mcp https://my-service.com/odata/
+
+# Check MCP compliance
+./simple_compliance_test.sh
+```
 
 ## License
 

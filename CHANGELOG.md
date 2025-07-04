@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Read-only mode flags** (`--read-only`/`-ro` and `--read-only-but-functions`/`-robf`)
+  - Hide all modifying operations (create, update, delete) in read-only mode
+  - Allow function imports in read-only-but-functions mode
+- **MCP trace logging** (`--trace-mcp`) for debugging protocol communication
+  - Captures all incoming/outgoing MCP messages
+  - Saves detailed trace logs to `/tmp/mcp_trace_*.log` (Linux/WSL) or `%TEMP%\mcp_trace_*.log` (Windows)
+  - Helps diagnose client compatibility issues
+- **Service-specific hints** in `odata_service_info` tool
+  - Automatically detects known problematic services (e.g., SAP PO Tracking)
+  - Provides implementation hints and workarounds
+  - Includes field formatting guidance and example queries
+- **Full MCP protocol compliance**
+  - Added missing `resources/list` and `prompts/list` handlers
+  - Proper capability declarations in initialize response
+  - Strict JSON-RPC 2.0 validation
+- **Enhanced error handling**
+  - Better null ID handling for Claude Desktop compatibility
+  - Proper JSON-RPC error responses
+  - Detailed error categorization
+- **HTTP/SSE transport support** (in addition to stdio)
+  - Support for Server-Sent Events transport with `--transport http`
+  - Configurable HTTP server address with `--http-addr`
+- **Legacy date format support** for SAP compatibility
+  - Automatic conversion of SAP date formats
+  - `--no-legacy-dates` flag to disable conversion
+- **Enhanced response features**
+  - Response size limits with `--max-response-size`
+  - Item count limits with `--max-items`
+  - Pagination hints with `--pagination-hints`
+  - Response metadata inclusion with `--response-metadata`
+  - Date conversion options with `--convert-dates-from-sap`
 - OData v4 support with automatic version detection
 - Query parameter translation ($inlinecount to $count for v4)
 - Automatic versioning based on git tags and commit history
@@ -16,11 +47,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive test suite for v4 functionality
 
 ### Changed
+- **Improved MCP protocol implementation**
+  - Initialize response now includes all required capabilities (tools, resources, prompts)
+  - Better compatibility with different MCP clients (Claude Desktop, RooCode, GitHub Copilot)
+  - Stricter validation to prevent client-side errors
+- **ID handling improvements**
+  - Null IDs are converted to 0 for better client compatibility
+  - Proper handling of different ID types (string, number, null)
 - Improved response parsing for both v2 and v4 formats
 - Enhanced error handling with detailed OData error messages
 - Makefile now uses dynamic versioning instead of hardcoded version
 
 ### Fixed
+- **Claude Desktop Zod validation errors**
+  - Missing capability declarations that caused validation failures
+  - Null ID handling that triggered type errors
+  - Missing method handlers for resources and prompts
+- **MCP client compatibility issues**
+  - Fixed issues preventing tools from appearing in RooCode
+  - Resolved connection problems with various MCP clients
+  - Better error response formatting
 - Multiple main function declarations in test files
 - Type assertion panics in response parser
 - Count value parsing for v2 string responses
