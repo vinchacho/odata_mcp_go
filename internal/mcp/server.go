@@ -140,6 +140,9 @@ func (s *Server) HandleMessage(ctx context.Context, msg *transport.Message) (*tr
 			return s.createErrorResponse(msg.ID, -32700, "Parse error", err.Error()), nil
 		}
 		req.Params = params
+	} else {
+		// Initialize empty params map
+		req.Params = make(map[string]interface{})
 	}
 	
 	// Handle notifications (no response expected)
@@ -174,6 +177,11 @@ func (s *Server) Stop() {
 
 // createErrorResponse creates an error response message
 func (s *Server) createErrorResponse(id interface{}, code int, message, data string) *transport.Message {
+	// Ensure ID is never nil for error responses
+	if id == nil {
+		id = 0 // Use 0 as default ID for null requests
+	}
+	
 	idBytes, _ := json.Marshal(id)
 	return &transport.Message{
 		JSONRPC: "2.0",
@@ -188,6 +196,11 @@ func (s *Server) createErrorResponse(id interface{}, code int, message, data str
 
 // createResponse creates a success response message
 func (s *Server) createResponse(id interface{}, result interface{}) (*transport.Message, error) {
+	// Ensure ID is never nil for responses
+	if id == nil {
+		id = 0 // Use 0 as default ID for null requests
+	}
+	
 	idBytes, _ := json.Marshal(id)
 	resultBytes, err := json.Marshal(result)
 	if err != nil {
@@ -206,14 +219,15 @@ func (s *Server) handleInitializeV2(req *Request) (*transport.Message, error) {
 	result := map[string]interface{}{
 		"protocolVersion": constants.MCPProtocolVersion,
 		"capabilities": map[string]interface{}{
-			"tools": map[string]interface{}{
-				"listChanged": true,
+			"prompts": map[string]interface{}{
+				"listChanged": false,
 			},
 			"resources": map[string]interface{}{
 				"subscribe": false,
-			},
-			"prompts": map[string]interface{}{
 				"listChanged": false,
+			},
+			"tools": map[string]interface{}{
+				"listChanged": true,
 			},
 		},
 		"serverInfo": map[string]interface{}{
