@@ -126,6 +126,11 @@ func (s *Server) Run() error {
 
 // HandleMessage processes incoming transport messages
 func (s *Server) HandleMessage(ctx context.Context, msg *transport.Message) (*transport.Message, error) {
+	// Validate JSON-RPC version
+	if msg.JSONRPC != "2.0" {
+		return s.createErrorResponse(msg.ID, -32600, "Invalid Request", "JSON-RPC version must be 2.0"), nil
+	}
+	
 	// Convert transport message to internal request
 	req := &Request{
 		JSONRPC: msg.JSONRPC,
@@ -177,12 +182,23 @@ func (s *Server) Stop() {
 
 // createErrorResponse creates an error response message
 func (s *Server) createErrorResponse(id interface{}, code int, message, data string) *transport.Message {
-	// Ensure ID is never nil for error responses
-	if id == nil {
-		id = 0 // Use 0 as default ID for null requests
+	var idBytes json.RawMessage
+	
+	// Handle different ID types
+	switch v := id.(type) {
+	case json.RawMessage:
+		// Check if it's null
+		if string(v) == "null" || len(v) == 0 {
+			idBytes = json.RawMessage("0")
+		} else {
+			idBytes = v
+		}
+	case nil:
+		idBytes = json.RawMessage("0")
+	default:
+		idBytes, _ = json.Marshal(id)
 	}
 	
-	idBytes, _ := json.Marshal(id)
 	return &transport.Message{
 		JSONRPC: "2.0",
 		ID:      idBytes,
@@ -196,12 +212,23 @@ func (s *Server) createErrorResponse(id interface{}, code int, message, data str
 
 // createResponse creates a success response message
 func (s *Server) createResponse(id interface{}, result interface{}) (*transport.Message, error) {
-	// Ensure ID is never nil for responses
-	if id == nil {
-		id = 0 // Use 0 as default ID for null requests
+	var idBytes json.RawMessage
+	
+	// Handle different ID types - convert null to 0 for Claude Desktop compatibility
+	switch v := id.(type) {
+	case json.RawMessage:
+		// Check if it's null and convert to 0 for Claude Desktop
+		if string(v) == "null" || len(v) == 0 {
+			idBytes = json.RawMessage("0")
+		} else {
+			idBytes = v
+		}
+	case nil:
+		idBytes = json.RawMessage("0")
+	default:
+		idBytes, _ = json.Marshal(id)
 	}
 	
-	idBytes, _ := json.Marshal(id)
 	resultBytes, err := json.Marshal(result)
 	if err != nil {
 		return nil, err
