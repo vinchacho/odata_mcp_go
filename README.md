@@ -245,6 +245,47 @@ The Claude Desktop configuration file location varies by platform:
         }
     }
 }
+```
+
+#### Operation Filtering Configuration Examples
+
+```json
+{
+    "mcpServers": {
+        "large-service-readonly": {
+            "command": "/usr/local/bin/odata-mcp",
+            "args": [
+                "--service",
+                "https://large-erp.company.com/odata/",
+                "--disable", "cud",  // Disable create, update, delete
+                "--tool-shrink",
+                "--entities", "Orders,Products,Customers"
+            ],
+            "env": {
+                "ODATA_USERNAME": "readonly_user",
+                "ODATA_PASSWORD": "readonly_pass"
+            }
+        },
+        "minimal-tools": {
+            "command": "/usr/local/bin/odata-mcp",
+            "args": [
+                "--service",
+                "https://api.company.com/odata/",
+                "--enable", "gf",  // Only get and filter operations
+                "--tool-shrink"
+            ]
+        },
+        "no-actions": {
+            "command": "/usr/local/bin/odata-mcp", 
+            "args": [
+                "--service",
+                "https://api.company.com/odata/",
+                "--disable", "a",  // Disable all function imports/actions
+                "--verbose"
+            ]
+        }
+    }
+}
 
 ### Transport Options
 
@@ -377,6 +418,38 @@ export ODATA_PASSWORD=secret
 ./odata-mcp -robf https://my-service.com/odata/  # Short form
 ```
 
+### Operation Type Filtering
+
+Fine-grained control over which operation types are available. Operation types are:
+- `C` - Create operations
+- `S` - Search operations
+- `F` - Filter/list operations
+- `G` - Get (single entity) operations
+- `U` - Update operations
+- `D` - Delete operations
+- `A` - Actions/function imports
+- `R` - Read operations (expands to S, F, G)
+
+```bash
+# Enable only read operations (search, filter, get)
+./odata-mcp --enable "r" https://my-service.com/odata/
+./odata-mcp --enable "sfg" https://my-service.com/odata/  # Same as above
+
+# Disable all modifying operations
+./odata-mcp --disable "cud" https://my-service.com/odata/
+
+# Enable only get and filter operations
+./odata-mcp --enable "gf" https://my-service.com/odata/
+
+# Disable actions/function imports
+./odata-mcp --disable "a" https://my-service.com/odata/
+
+# Case-insensitive
+./odata-mcp --disable "CUD" https://my-service.com/odata/
+```
+
+Note: `--enable` and `--disable` cannot be used together.
+
 ### Debugging and Inspection
 
 ```bash
@@ -434,6 +507,8 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `--trace-mcp` | Enable MCP protocol trace logging | `false` |
 | `--read-only, -ro` | Hide all modifying operations | `false` |
 | `--read-only-but-functions, -robf` | Hide create/update/delete but allow functions | `false` |
+| `--enable` | Enable only specified operation types (C,S,F,G,U,D,A,R) | |
+| `--disable` | Disable specified operation types (C,S,F,G,U,D,A,R) | |
 | `--hints-file` | Path to hints JSON file | `hints.json` in binary dir |
 | `--hint` | Direct hint JSON or text from CLI | |
 | `--transport` | Transport type: 'stdio' or 'http' | `stdio` |

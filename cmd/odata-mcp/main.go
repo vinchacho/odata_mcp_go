@@ -36,7 +36,12 @@ Examples:
   odata-mcp https://services.odata.org/V2/Northwind/Northwind.svc/
   odata-mcp --service https://my-sap-service.com/sap/opu/odata/sap/SERVICE_NAME/
   odata-mcp --user admin --password secret https://my-service.com/odata/
-  odata-mcp --cookie-file cookies.txt https://my-service.com/odata/`,
+  odata-mcp --cookie-file cookies.txt https://my-service.com/odata/
+  
+Operation Filtering Examples:
+  odata-mcp --disable "cud" https://example.com/odata/  # Disable create, update, delete
+  odata-mcp --enable "r" https://example.com/odata/     # Enable only read operations (search, filter, get)
+  odata-mcp --disable "a" https://example.com/odata/    # Disable actions/function imports`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runBridge,
 }
@@ -101,6 +106,10 @@ func init() {
 	// Hint options
 	rootCmd.Flags().StringVar(&cfg.HintsFile, "hints-file", "", "Path to hints JSON file (defaults to hints.json in same directory as binary)")
 	rootCmd.Flags().StringVar(&cfg.Hint, "hint", "", "Direct hint JSON or text to inject into service info")
+	
+	// Operation type filtering
+	rootCmd.Flags().StringVar(&cfg.EnableOps, "enable", "", "Enable only specified operation types (C=create, S=search, F=filter, G=get, U=update, D=delete, A=action, R=read expands to SFG)")
+	rootCmd.Flags().StringVar(&cfg.DisableOps, "disable", "", "Disable specified operation types (C=create, S=search, F=filter, G=get, U=update, D=delete, A=action, R=read expands to SFG)")
 
 	// Bind flags to viper for environment variable support
 	viper.BindPFlag("service", rootCmd.Flags().Lookup("service"))
@@ -137,6 +146,18 @@ func runBridge(cmd *cobra.Command, args []string) error {
 	// Handle read-only mode flags
 	if cfg.ReadOnly && cfg.ReadOnlyButFunctions {
 		return fmt.Errorf("cannot use both --read-only and --read-only-but-functions flags at the same time")
+	}
+	
+	// Handle operation type filtering flags
+	if cfg.EnableOps != "" && cfg.DisableOps != "" {
+		return fmt.Errorf("cannot use both --enable and --disable flags at the same time")
+	}
+	
+	if cfg.EnableOps != "" && cfg.Verbose {
+		fmt.Fprintf(os.Stderr, "[VERBOSE] Operation filtering enabled. Only these operations will be available: %s\n", strings.ToUpper(cfg.EnableOps))
+	}
+	if cfg.DisableOps != "" && cfg.Verbose {
+		fmt.Fprintf(os.Stderr, "[VERBOSE] Operation filtering enabled. These operations will be disabled: %s\n", strings.ToUpper(cfg.DisableOps))
 	}
 	
 	if cfg.IsReadOnly() {

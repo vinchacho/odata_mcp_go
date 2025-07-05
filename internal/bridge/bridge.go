@@ -133,6 +133,15 @@ func (b *ODataMCPBridge) generateTools() error {
 	
 	for _, name := range functionNames {
 		function := b.metadata.FunctionImports[name]
+		
+		// Check if actions are enabled
+		if !b.config.IsOperationEnabled('A') {
+			if b.config.Verbose {
+				fmt.Fprintf(os.Stderr, "[VERBOSE] Skipping function %s - actions are disabled\n", name)
+			}
+			continue
+		}
+		
 		// Skip modifying functions in read-only mode unless functions are allowed
 		if b.config.ReadOnly || (!b.config.AllowModifyingFunctions() && b.isFunctionModifying(function)) {
 			if b.config.Verbose {
@@ -261,31 +270,37 @@ func (b *ODataMCPBridge) generateEntitySetTools(entitySetName string, entitySet 
 	}
 
 	// Generate filter/list tool
-	b.generateFilterTool(entitySetName, entitySet, entityType)
+	if b.config.IsOperationEnabled('F') {
+		b.generateFilterTool(entitySetName, entitySet, entityType)
+	}
 
-	// Generate count tool  
-	b.generateCountTool(entitySetName, entitySet, entityType)
+	// Generate count tool (consider it part of filter/read operations)
+	if b.config.IsOperationEnabled('F') {
+		b.generateCountTool(entitySetName, entitySet, entityType)
+	}
 
 	// Generate search tool if supported
-	if entitySet.Searchable {
+	if entitySet.Searchable && b.config.IsOperationEnabled('S') {
 		b.generateSearchTool(entitySetName, entitySet, entityType)
 	}
 
 	// Generate get tool
-	b.generateGetTool(entitySetName, entitySet, entityType)
+	if b.config.IsOperationEnabled('G') {
+		b.generateGetTool(entitySetName, entitySet, entityType)
+	}
 
 	// Generate create tool if allowed and not in read-only mode
-	if entitySet.Creatable && !b.config.IsReadOnly() {
+	if entitySet.Creatable && !b.config.IsReadOnly() && b.config.IsOperationEnabled('C') {
 		b.generateCreateTool(entitySetName, entitySet, entityType)
 	}
 
 	// Generate update tool if allowed and not in read-only mode
-	if entitySet.Updatable && !b.config.IsReadOnly() {
+	if entitySet.Updatable && !b.config.IsReadOnly() && b.config.IsOperationEnabled('U') {
 		b.generateUpdateTool(entitySetName, entitySet, entityType)
 	}
 
 	// Generate delete tool if allowed and not in read-only mode
-	if entitySet.Deletable && !b.config.IsReadOnly() {
+	if entitySet.Deletable && !b.config.IsReadOnly() && b.config.IsOperationEnabled('D') {
 		b.generateDeleteTool(entitySetName, entitySet, entityType)
 	}
 }
@@ -839,6 +854,13 @@ func (b *ODataMCPBridge) GetTraceInfo() (*models.TraceInfo, error) {
 	} else if b.config.ReadOnlyButFunctions {
 		readOnlyMode = "Read-only except functions"
 	}
+	
+	operationFilter := ""
+	if b.config.EnableOps != "" {
+		operationFilter = fmt.Sprintf("Enabled: %s", strings.ToUpper(b.config.EnableOps))
+	} else if b.config.DisableOps != "" {
+		operationFilter = fmt.Sprintf("Disabled: %s", strings.ToUpper(b.config.DisableOps))
+	}
 
 	tools := make([]models.ToolInfo, 0, len(b.tools))
 	for _, tool := range b.tools {
@@ -855,6 +877,7 @@ func (b *ODataMCPBridge) GetTraceInfo() (*models.TraceInfo, error) {
 		SortTools:       b.config.SortTools,
 		EntityFilter:    b.config.AllowedEntities,
 		FunctionFilter:  b.config.AllowedFunctions,
+		OperationFilter: operationFilter,
 		Authentication:  authType,
 		ReadOnlyMode:    readOnlyMode,
 		MetadataSummary: models.MetadataSummary{

@@ -1,5 +1,10 @@
 package config
 
+import (
+	"strings"
+	"unicode"
+)
+
 // Config holds all configuration options for the OData MCP bridge
 type Config struct {
 	// Service configuration
@@ -48,6 +53,10 @@ type Config struct {
 	// Hint configuration
 	HintsFile string `mapstructure:"hints_file"` // Path to hints JSON file
 	Hint      string `mapstructure:"hint"`       // Direct hint JSON from CLI
+	
+	// Operation type filtering
+	EnableOps  string `mapstructure:"enable_ops"`  // Operation types to enable (e.g., "csfg")
+	DisableOps string `mapstructure:"disable_ops"` // Operation types to disable (e.g., "cud")
 }
 
 // HasBasicAuth returns true if username and password are configured
@@ -73,4 +82,39 @@ func (c *Config) IsReadOnly() bool {
 // AllowModifyingFunctions returns true if modifying function imports are allowed
 func (c *Config) AllowModifyingFunctions() bool {
 	return !c.ReadOnly
+}
+
+// IsOperationEnabled checks if a specific operation type is enabled based on --enable/--disable flags
+func (c *Config) IsOperationEnabled(opType rune) bool {
+	// Normalize operation type to uppercase
+	opType = unicode.ToUpper(opType)
+	
+	// Expand 'R' to 'SFG'
+	if opType == 'R' {
+		// Check if any of S, F, or G are enabled
+		return c.IsOperationEnabled('S') || c.IsOperationEnabled('F') || c.IsOperationEnabled('G')
+	}
+	
+	// If --enable is specified, only those operations are allowed
+	if c.EnableOps != "" {
+		enableOps := strings.ToUpper(c.EnableOps)
+		// Check if 'R' is in enable list and we're checking S, F, or G
+		if strings.ContainsRune(enableOps, 'R') && (opType == 'S' || opType == 'F' || opType == 'G') {
+			return true
+		}
+		return strings.ContainsRune(enableOps, opType)
+	}
+	
+	// If --disable is specified, those operations are not allowed
+	if c.DisableOps != "" {
+		disableOps := strings.ToUpper(c.DisableOps)
+		// Check if 'R' is in disable list and we're checking S, F, or G
+		if strings.ContainsRune(disableOps, 'R') && (opType == 'S' || opType == 'F' || opType == 'G') {
+			return false
+		}
+		return !strings.ContainsRune(disableOps, opType)
+	}
+	
+	// If neither flag is specified, all operations are enabled by default
+	return true
 }

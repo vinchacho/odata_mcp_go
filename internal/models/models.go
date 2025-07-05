@@ -154,6 +154,7 @@ type TraceInfo struct {
 	SortTools        bool                `json:"sort_tools"`
 	EntityFilter     []string            `json:"entity_filter,omitempty"`
 	FunctionFilter   []string            `json:"function_filter,omitempty"`
+	OperationFilter  string              `json:"operation_filter,omitempty"`
 	Authentication   string              `json:"authentication"`
 	ReadOnlyMode     string              `json:"read_only_mode,omitempty"`
 	MetadataSummary  MetadataSummary     `json:"metadata_summary"`

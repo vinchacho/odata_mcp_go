@@ -47,10 +47,22 @@ export ODATA_PASSWORD=secret
 ### Filtering
 - `--entities` - Filter entities (comma-separated, wildcards supported)
 - `--functions` - Filter functions (comma-separated, wildcards supported)
+- `--enable` - Enable only specified operation types (C,S,F,G,U,D,A,R)
+- `--disable` - Disable specified operation types (C,S,F,G,U,D,A,R)
 
 ### Read-Only Modes
 - `--read-only, -ro` - Hide all modifying operations
 - `--read-only-but-functions, -robf` - Hide create/update/delete but allow functions
+
+### Operation Type Filtering
+Operation codes: C=create, S=search, F=filter, G=get, U=update, D=delete, A=actions, R=read (SFG)
+```bash
+# Examples:
+--disable "cud"    # Disable create, update, delete
+--enable "r"       # Enable only read operations (search, filter, get)
+--disable "a"      # Disable actions/function imports
+--enable "gf"      # Enable only get and filter operations
+```
 
 ### Debugging
 - `-v, --verbose` - Verbose output
