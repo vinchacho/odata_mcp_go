@@ -247,6 +247,43 @@ The Claude Desktop configuration file location varies by platform:
 }
 ```
 
+#### Claude Code CLI Compatibility
+
+The Claude Code CLI has stricter property name validation than other Claude tools. If you encounter errors like:
+
+```
+API Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"tools.17.custom.input_schema.properties: Property keys should match pattern ^[a-zA-Z0-9_.-]{1,64}$"}}
+```
+
+Use the `--claude-code-friendly` flag to remove the `$` prefix from OData parameter names:
+
+```json
+{
+    "mcpServers": {
+        "northwind-claude-code": {
+            "command": "/usr/local/bin/odata-mcp",
+            "args": [
+                "--service",
+                "https://services.odata.org/V2/Northwind/Northwind.svc/",
+                "--claude-code-friendly",  // Removes $ from parameter names
+                "--tool-shrink"
+            ]
+        }
+    }
+}
+```
+
+This transforms parameter names:
+- `$filter` → `filter`
+- `$select` → `select`
+- `$expand` → `expand`
+- `$orderby` → `orderby`
+- `$top` → `top`
+- `$skip` → `skip`
+- `$count` → `count`
+
+The server internally maps these friendly names back to their OData equivalents when making requests.
+
 #### Operation Filtering Configuration Examples
 
 ```json
@@ -521,6 +558,7 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `--max-response-size` | Maximum response size in bytes | `5MB` |
 | `--max-items` | Maximum number of items in response | `100` |
 | `--verbose-errors` | Provide detailed error context | `false` |
+| `--claude-code-friendly, -c` | Remove $ prefix from OData parameters for Claude Code CLI compatibility | `false` |
 
 ### Environment Variables
 

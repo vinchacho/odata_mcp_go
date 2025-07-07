@@ -57,6 +57,9 @@ type Config struct {
 	// Operation type filtering
 	EnableOps  string `mapstructure:"enable_ops"`  // Operation types to enable (e.g., "csfg")
 	DisableOps string `mapstructure:"disable_ops"` // Operation types to disable (e.g., "cud")
+	
+	// Claude Code compatibility
+	ClaudeCodeFriendly bool `mapstructure:"claude_code_friendly"` // Remove $ prefix from OData parameters
 }
 
 // HasBasicAuth returns true if username and password are configured

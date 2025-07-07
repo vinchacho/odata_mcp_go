@@ -110,6 +110,9 @@ func init() {
 	// Operation type filtering
 	rootCmd.Flags().StringVar(&cfg.EnableOps, "enable", "", "Enable only specified operation types (C=create, S=search, F=filter, G=get, U=update, D=delete, A=action, R=read expands to SFG)")
 	rootCmd.Flags().StringVar(&cfg.DisableOps, "disable", "", "Disable specified operation types (C=create, S=search, F=filter, G=get, U=update, D=delete, A=action, R=read expands to SFG)")
+	
+	// Claude Code compatibility
+	rootCmd.Flags().BoolVarP(&cfg.ClaudeCodeFriendly, "claude-code-friendly", "c", false, "Remove $ prefix from OData parameters for Claude Code CLI compatibility")
 
 	// Bind flags to viper for environment variable support
 	viper.BindPFlag("service", rootCmd.Flags().Lookup("service"))

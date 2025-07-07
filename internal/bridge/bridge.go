@@ -225,6 +225,53 @@ func (b *ODataMCPBridge) isFunctionModifying(function *models.FunctionImport) bo
 		   httpMethod == "MERGE"
 }
 
+// getParameterName returns the parameter name based on ClaudeCodeFriendly setting
+func (b *ODataMCPBridge) getParameterName(odataParam string) string {
+	if b.config.ClaudeCodeFriendly && strings.HasPrefix(odataParam, "$") {
+		return strings.TrimPrefix(odataParam, "$")
+	}
+	return odataParam
+}
+
+// mapParameterToOData maps a parameter name back to its OData equivalent
+func (b *ODataMCPBridge) mapParameterToOData(param string) string {
+	if b.config.ClaudeCodeFriendly {
+		// Map friendly names back to OData names
+		switch param {
+		case "filter":
+			return "$filter"
+		case "select":
+			return "$select"
+		case "expand":
+			return "$expand"
+		case "orderby":
+			return "$orderby"
+		case "top":
+			return "$top"
+		case "skip":
+			return "$skip"
+		case "count":
+			return "$count"
+		case "search":
+			return "$search"
+		case "format":
+			return "$format"
+		default:
+			// If it doesn't match known OData params, return as-is
+			return param
+		}
+	}
+	// If not in Claude-friendly mode, check if we need to add $ prefix
+	if !strings.HasPrefix(param, "$") && !strings.HasPrefix(param, "_") {
+		// Check if this is a known OData parameter without prefix
+		switch param {
+		case "filter", "select", "expand", "orderby", "top", "skip", "count", "search", "format":
+			return "$" + param
+		}
+	}
+	return param
+}
+
 // generateServiceInfoTool creates a tool to get service information
 func (b *ODataMCPBridge) generateServiceInfoTool() {
 	toolName := b.formatToolName("odata_service_info", "")
@@ -314,31 +361,31 @@ func (b *ODataMCPBridge) generateFilterTool(entitySetName string, entitySet *mod
 
 	// Build input schema with standard OData parameters
 	properties := map[string]interface{}{
-		"$filter": map[string]interface{}{
+		b.getParameterName("$filter"): map[string]interface{}{
 			"type":        "string",
 			"description": "OData filter expression",
 		},
-		"$select": map[string]interface{}{
+		b.getParameterName("$select"): map[string]interface{}{
 			"type":        "string", 
 			"description": "Comma-separated list of properties to select",
 		},
-		"$expand": map[string]interface{}{
+		b.getParameterName("$expand"): map[string]interface{}{
 			"type":        "string",
 			"description": "Navigation properties to expand",
 		},
-		"$orderby": map[string]interface{}{
+		b.getParameterName("$orderby"): map[string]interface{}{
 			"type":        "string",
 			"description": "Properties to order by",
 		},
-		"$top": map[string]interface{}{
+		b.getParameterName("$top"): map[string]interface{}{
 			"type":        "integer",
 			"description": "Maximum number of entities to return",
 		},
-		"$skip": map[string]interface{}{
+		b.getParameterName("$skip"): map[string]interface{}{
 			"type":        "integer", 
 			"description": "Number of entities to skip",
 		},
-		"$count": map[string]interface{}{
+		b.getParameterName("$count"): map[string]interface{}{
 			"type":        "boolean",
 			"description": "Include total count of matching entities (v4) or use $inlinecount for v2",
 		},
@@ -381,7 +428,7 @@ func (b *ODataMCPBridge) generateCountTool(entitySetName string, entitySet *mode
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
-				"$filter": map[string]interface{}{
+				b.getParameterName("$filter"): map[string]interface{}{
 					"type":        "string",
 					"description": "OData filter expression",
 				},
@@ -421,11 +468,11 @@ func (b *ODataMCPBridge) generateSearchTool(entitySetName string, entitySet *mod
 					"type":        "string",
 					"description": "Search query string",
 				},
-				"$select": map[string]interface{}{
+				b.getParameterName("$select"): map[string]interface{}{
 					"type":        "string",
 					"description": "Comma-separated list of properties to select",
 				},
-				"$top": map[string]interface{}{
+				b.getParameterName("$top"): map[string]interface{}{
 					"type":        "integer",
 					"description": "Maximum number of entities to return",
 				},
@@ -474,11 +521,11 @@ func (b *ODataMCPBridge) generateGetTool(entitySetName string, entitySet *models
 	}
 
 	// Add optional query parameters
-	properties["$select"] = map[string]interface{}{
+	properties[b.getParameterName("$select")] = map[string]interface{}{
 		"type":        "string",
 		"description": "Comma-separated list of properties to select",
 	}
-	properties["$expand"] = map[string]interface{}{
+	properties[b.getParameterName("$expand")] = map[string]interface{}{
 		"type":        "string", 
 		"description": "Navigation properties to expand",
 	}
@@ -862,9 +909,26 @@ func (b *ODataMCPBridge) GetTraceInfo() (*models.TraceInfo, error) {
 		operationFilter = fmt.Sprintf("Disabled: %s", strings.ToUpper(b.config.DisableOps))
 	}
 
-	tools := make([]models.ToolInfo, 0, len(b.tools))
-	for _, tool := range b.tools {
-		tools = append(tools, *tool)
+	// Get the actual tools from the MCP server to include full schema info
+	mcpTools := b.server.GetTools()
+	tools := make([]models.ToolInfo, 0, len(mcpTools))
+	
+	for _, mcpTool := range mcpTools {
+		// Find the corresponding tool info
+		var toolInfo *models.ToolInfo
+		for _, ti := range b.tools {
+			if ti.Name == mcpTool.Name {
+				toolInfo = ti
+				break
+			}
+		}
+		
+		if toolInfo != nil {
+			// Create a copy with properties from the MCP tool
+			info := *toolInfo
+			info.Properties = mcpTool.InputSchema
+			tools = append(tools, info)
+		}
 	}
 
 	return &models.TraceInfo{
@@ -935,28 +999,35 @@ func (b *ODataMCPBridge) handleEntityFilter(ctx context.Context, entitySetName s
 	// Build query options from arguments using standard OData parameters
 	options := make(map[string]string)
 	
+	// Map arguments to handle both Claude-friendly and standard parameter names
+	mappedArgs := make(map[string]interface{})
+	for key, value := range args {
+		mappedKey := b.mapParameterToOData(key)
+		mappedArgs[mappedKey] = value
+	}
+	
 	// Handle each OData parameter
-	if filter, ok := args["$filter"].(string); ok && filter != "" {
+	if filter, ok := mappedArgs["$filter"].(string); ok && filter != "" {
 		options[constants.QueryFilter] = filter
 	}
-	if selectParam, ok := args["$select"].(string); ok && selectParam != "" {
+	if selectParam, ok := mappedArgs["$select"].(string); ok && selectParam != "" {
 		options[constants.QuerySelect] = selectParam
 	}
-	if expand, ok := args["$expand"].(string); ok && expand != "" {
+	if expand, ok := mappedArgs["$expand"].(string); ok && expand != "" {
 		options[constants.QueryExpand] = expand
 	}
-	if orderby, ok := args["$orderby"].(string); ok && orderby != "" {
+	if orderby, ok := mappedArgs["$orderby"].(string); ok && orderby != "" {
 		options[constants.QueryOrderBy] = orderby
 	}
-	if top, ok := args["$top"].(float64); ok {
+	if top, ok := mappedArgs["$top"].(float64); ok {
 		options[constants.QueryTop] = fmt.Sprintf("%d", int(top))
 	}
-	if skip, ok := args["$skip"].(float64); ok {
+	if skip, ok := mappedArgs["$skip"].(float64); ok {
 		options[constants.QuerySkip] = fmt.Sprintf("%d", int(skip))
 	}
 	
 	// Handle $count parameter - translate to appropriate version-specific parameter
-	if count, ok := args["$count"].(bool); ok && count {
+	if count, ok := mappedArgs["$count"].(bool); ok && count {
 		// The client will automatically translate this to $count=true for v4
 		options[constants.QueryInlineCount] = "allpages"
 	}
@@ -1180,7 +1251,14 @@ func (b *ODataMCPBridge) handleEntityCount(ctx context.Context, entitySetName st
 	// Build query options - for count we typically only need filter
 	options := make(map[string]string)
 	
-	if filter, ok := args["$filter"].(string); ok && filter != "" {
+	// Map arguments to handle both Claude-friendly and standard parameter names
+	mappedArgs := make(map[string]interface{})
+	for key, value := range args {
+		mappedKey := b.mapParameterToOData(key)
+		mappedArgs[mappedKey] = value
+	}
+	
+	if filter, ok := mappedArgs["$filter"].(string); ok && filter != "" {
 		options[constants.QueryFilter] = filter
 	}
 	
@@ -1218,12 +1296,22 @@ func (b *ODataMCPBridge) handleEntitySearch(ctx context.Context, entitySetName s
 	options := make(map[string]string)
 	options[constants.QuerySearch] = searchTerm
 	
+	// Map arguments to handle both Claude-friendly and standard parameter names
+	mappedArgs := make(map[string]interface{})
+	for key, value := range args {
+		mappedKey := b.mapParameterToOData(key)
+		mappedArgs[mappedKey] = value
+	}
+	
 	// Handle optional parameters
-	if top, ok := args["$top"].(float64); ok {
+	if top, ok := mappedArgs["$top"].(float64); ok {
 		options[constants.QueryTop] = fmt.Sprintf("%d", int(top))
 	}
-	if skip, ok := args["$skip"].(float64); ok {
+	if skip, ok := mappedArgs["$skip"].(float64); ok {
 		options[constants.QuerySkip] = fmt.Sprintf("%d", int(skip))
+	}
+	if selectParam, ok := mappedArgs["$select"].(string); ok && selectParam != "" {
+		options[constants.QuerySelect] = selectParam
 	}
 	
 	// Call OData client to search entities
@@ -1252,12 +1340,19 @@ func (b *ODataMCPBridge) handleEntityGet(ctx context.Context, entitySetName stri
 		}
 	}
 	
+	// Map arguments to handle both Claude-friendly and standard parameter names
+	mappedArgs := make(map[string]interface{})
+	for key, value := range args {
+		mappedKey := b.mapParameterToOData(key)
+		mappedArgs[mappedKey] = value
+	}
+	
 	// Build query options for expand/select
 	options := make(map[string]string)
-	if selectParam, ok := args["$select"].(string); ok && selectParam != "" {
+	if selectParam, ok := mappedArgs["$select"].(string); ok && selectParam != "" {
 		options[constants.QuerySelect] = selectParam
 	}
-	if expand, ok := args["$expand"].(string); ok && expand != "" {
+	if expand, ok := mappedArgs["$expand"].(string); ok && expand != "" {
 		options[constants.QueryExpand] = expand
 	}
 	
