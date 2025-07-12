@@ -18,21 +18,21 @@ const (
 
 // OData primitive type mappings to Go types
 var ODataTypeMap = map[string]string{
-	"Edm.String":           "string",
-	"Edm.Int16":            "int16",
-	"Edm.Int32":            "int32",
-	"Edm.Int64":            "int64",
-	"Edm.Boolean":          "bool",
-	"Edm.Byte":             "byte",
-	"Edm.SByte":            "int8",
-	"Edm.Single":           "float32",
-	"Edm.Double":           "float64",
-	"Edm.Decimal":          "string", // Use string for precision
-	"Edm.DateTime":         "string", // ISO 8601 string
-	"Edm.DateTimeOffset":   "string", // ISO 8601 string with timezone
-	"Edm.Time":             "string", // Duration string
-	"Edm.Guid":             "string", // UUID string
-	"Edm.Binary":           "string", // Base64 encoded string
+	"Edm.String":         "string",
+	"Edm.Int16":          "int16",
+	"Edm.Int32":          "int32",
+	"Edm.Int64":          "int64",
+	"Edm.Boolean":        "bool",
+	"Edm.Byte":           "byte",
+	"Edm.SByte":          "int8",
+	"Edm.Single":         "float32",
+	"Edm.Double":         "float64",
+	"Edm.Decimal":        "string", // Use string for precision
+	"Edm.DateTime":       "string", // ISO 8601 string
+	"Edm.DateTimeOffset": "string", // ISO 8601 string with timezone
+	"Edm.Time":           "string", // Duration string
+	"Edm.Guid":           "string", // UUID string
+	"Edm.Binary":         "string", // Base64 encoded string
 }
 
 // HTTP methods supported by OData
@@ -47,16 +47,16 @@ const (
 
 // OData system query options
 const (
-	QueryFilter    = "$filter"
-	QuerySelect    = "$select"
-	QueryExpand    = "$expand"
-	QueryOrderBy   = "$orderby"
-	QueryTop       = "$top"
-	QuerySkip      = "$skip"
-	QueryCount     = "$count"
-	QuerySearch    = "$search"
-	QueryFormat    = "$format"
-	QuerySkipToken = "$skiptoken"
+	QueryFilter      = "$filter"
+	QuerySelect      = "$select"
+	QueryExpand      = "$expand"
+	QueryOrderBy     = "$orderby"
+	QueryTop         = "$top"
+	QuerySkip        = "$skip"
+	QueryCount       = "$count"
+	QuerySearch      = "$search"
+	QueryFormat      = "$format"
+	QuerySkipToken   = "$skiptoken"
 	QueryInlineCount = "$inlinecount"
 )
 
@@ -74,29 +74,29 @@ const (
 
 // HTTP headers
 const (
-	ContentType     = "Content-Type"
-	Accept          = "Accept"
-	Authorization   = "Authorization"
-	UserAgent       = "User-Agent"
-	IfMatch         = "If-Match"
-	IfNoneMatch     = "If-None-Match"
+	ContentType   = "Content-Type"
+	Accept        = "Accept"
+	Authorization = "Authorization"
+	UserAgent     = "User-Agent"
+	IfMatch       = "If-Match"
+	IfNoneMatch   = "If-None-Match"
 )
 
 // Content types
 const (
-	ContentTypeJSON       = "application/json"
-	ContentTypeXML        = "application/xml"
-	ContentTypeAtomXML    = "application/atom+xml"
-	ContentTypeFormURL    = "application/x-www-form-urlencoded"
-	ContentTypeODataJSON  = "application/json;odata=verbose"
-	ContentTypeODataAtom  = "application/atom+xml;type=entry"
+	ContentTypeJSON      = "application/json"
+	ContentTypeXML       = "application/xml"
+	ContentTypeAtomXML   = "application/atom+xml"
+	ContentTypeFormURL   = "application/x-www-form-urlencoded"
+	ContentTypeODataJSON = "application/json;odata=verbose"
+	ContentTypeODataAtom = "application/atom+xml;type=entry"
 )
 
 // OData metadata endpoints
 const (
-	MetadataEndpoint     = "$metadata"
-	ServiceDocEndpoint   = ""
-	BatchEndpoint        = "$batch"
+	MetadataEndpoint   = "$metadata"
+	ServiceDocEndpoint = ""
+	BatchEndpoint      = "$batch"
 )
 
 // Tool operation types
@@ -150,11 +150,11 @@ const (
 
 // Default values
 const (
-	DefaultUserAgent          = "OData-MCP-Bridge/1.0 (Go)"
-	DefaultTimeout            = 30 // seconds
-	DefaultMaxResponseSize    = 10 * 1024 * 1024 // 10MB
-	DefaultMaxItems           = 1000
-	DefaultToolNameMaxLength  = 64
+	DefaultUserAgent         = "OData-MCP-Bridge/1.0 (Go)"
+	DefaultTimeout           = 30               // seconds
+	DefaultMaxResponseSize   = 10 * 1024 * 1024 // 10MB
+	DefaultMaxItems          = 1000
+	DefaultToolNameMaxLength = 64
 )
 
 // MCP-specific constants
@@ -201,7 +201,7 @@ func FormatServiceID(serviceURL string) string {
 		}
 		return svcName
 	}
-	
+
 	// Pattern 2: .svc endpoints like /MyService.svc -> MySvc
 	if matches := regexp.MustCompile(`/([A-Za-z][A-Za-z0-9_]+)\.svc`).FindStringSubmatch(serviceURL); len(matches) > 1 {
 		name := matches[1]
@@ -210,7 +210,7 @@ func FormatServiceID(serviceURL string) string {
 		}
 		return fmt.Sprintf("%sSvc", name)
 	}
-	
+
 	// Pattern 3: Generic service name from path like /odata/TestService -> Test
 	if matches := regexp.MustCompile(`/odata/([A-Za-z][A-Za-z0-9_]+)`).FindStringSubmatch(serviceURL); len(matches) > 1 {
 		name := matches[1]
@@ -219,7 +219,7 @@ func FormatServiceID(serviceURL string) string {
 		}
 		return name
 	}
-	
+
 	// Pattern 4: Extract last meaningful path segment
 	parsedURL, err := url.Parse(serviceURL)
 	if err == nil && parsedURL.Path != "" {
@@ -239,7 +239,7 @@ func FormatServiceID(serviceURL string) string {
 			}
 		}
 	}
-	
+
 	// Ultimate fallback
 	return "od"
 }

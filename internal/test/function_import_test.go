@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zmcp/odata-mcp/internal/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zmcp/odata-mcp/internal/client"
 )
 
 // TestFunctionImportURIEncoding tests proper URI encoding for function imports
@@ -62,10 +62,10 @@ func TestFunctionImportURIEncoding(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var capturedURL string
-			
+
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				capturedURL = r.URL.String()
-				
+
 				// Return a success response
 				w.WriteHeader(http.StatusOK)
 				json.NewEncoder(w).Encode(map[string]interface{}{
@@ -85,12 +85,12 @@ func TestFunctionImportURIEncoding(t *testing.T) {
 
 			// Verify the URL construction
 			assert.Equal(t, tt.expectedPath, strings.Split(capturedURL, "?")[0])
-			
+
 			if tt.expectedParams != "" {
 				// Extract query string
 				parts := strings.Split(capturedURL, "?")
 				require.Len(t, parts, 2, "Expected query parameters")
-				
+
 				// Check that all expected parameters are present
 				// Note: Order may vary, so we check each parameter individually
 				queryString := parts[1]
@@ -106,17 +106,17 @@ func TestFunctionImportURIEncoding(t *testing.T) {
 func TestActivateProgramFunction(t *testing.T) {
 	programName := "ZHELLO_GO_TEST"
 	activateCalled := false
-	
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "ACTIVATE_PROGRAM") {
 			activateCalled = true
-			
+
 			// Verify the program parameter is properly formatted
 			programParam := r.URL.RawQuery
-			
+
 			// The parameter should be in the format: Program='ZHELLO_GO_TEST'
 			assert.Contains(t, programParam, "Program='ZHELLO_GO_TEST'")
-			
+
 			// Return activation result
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(map[string]interface{}{
@@ -128,7 +128,7 @@ func TestActivateProgramFunction(t *testing.T) {
 			})
 			return
 		}
-		
+
 		// Default response
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{"d": map[string]interface{}{}})
@@ -139,9 +139,9 @@ func TestActivateProgramFunction(t *testing.T) {
 	client.SetBasicAuth("test", "test")
 
 	// Call ACTIVATE_PROGRAM
-	result, err := client.CallFunction(context.Background(), "ACTIVATE_PROGRAM", 
+	result, err := client.CallFunction(context.Background(), "ACTIVATE_PROGRAM",
 		map[string]interface{}{"Program": programName}, "GET")
-	
+
 	require.NoError(t, err)
 	assert.True(t, activateCalled, "ACTIVATE_PROGRAM should have been called")
 	assert.NotNil(t, result)

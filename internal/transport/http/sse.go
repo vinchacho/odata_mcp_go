@@ -22,11 +22,11 @@ type SSETransport struct {
 }
 
 type sseClient struct {
-	id       string
-	events   chan []byte
-	done     chan struct{}
-	writer   http.ResponseWriter
-	flusher  http.Flusher
+	id      string
+	events  chan []byte
+	done    chan struct{}
+	writer  http.ResponseWriter
+	flusher http.Flusher
 }
 
 type clientMessage struct {
@@ -47,13 +47,13 @@ func NewSSE(addr string, handler transport.Handler) *SSETransport {
 // Start initializes the HTTP server and begins listening
 func (t *SSETransport) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
-	
+
 	// SSE endpoint for bidirectional communication
 	mux.HandleFunc("/sse", t.handleSSE)
-	
+
 	// Regular HTTP endpoint for request-response
 	mux.HandleFunc("/rpc", t.handleRPC)
-	
+
 	// Health check endpoint
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -201,12 +201,12 @@ func (t *SSETransport) processMessages(ctx context.Context) {
 						},
 					}
 				}
-				
+
 				// Send response to specific client
 				t.mu.RLock()
 				client, exists := t.clients[cm.clientID]
 				t.mu.RUnlock()
-				
+
 				if exists && response != nil {
 					data, _ := json.Marshal(response)
 					select {
@@ -226,7 +226,7 @@ func (t *SSETransport) sendEvent(client *sseClient, eventType string, data inter
 		"type": eventType,
 		"data": data,
 	}
-	
+
 	if eventData, err := json.Marshal(event); err == nil {
 		select {
 		case client.events <- eventData:

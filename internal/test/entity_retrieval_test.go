@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zmcp/odata-mcp/internal/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zmcp/odata-mcp/internal/client"
 )
 
 // TestEntityKeyPredicate tests proper key predicate formatting for entity retrieval
@@ -52,11 +52,11 @@ func TestEntityKeyPredicate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var capturedPath string
-			
+
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				capturedPath = r.URL.Path
 				t.Logf("Request URL: %s", r.URL.String())
-				
+
 				// Return a mock entity
 				w.WriteHeader(http.StatusOK)
 				json.NewEncoder(w).Encode(map[string]interface{}{
@@ -86,7 +86,7 @@ func TestEntityKeyPredicate(t *testing.T) {
 // TestProgramEntityRetrieval tests retrieving a specific program entity
 func TestProgramEntityRetrieval(t *testing.T) {
 	programName := "ZHELLO_GO_TEST"
-	
+
 	t.Run("MockServer", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.Contains(r.URL.Path, fmt.Sprintf("PROGRAMSet('%s')", programName)) {
@@ -107,12 +107,12 @@ func TestProgramEntityRetrieval(t *testing.T) {
 				})
 				return
 			}
-			
+
 			// Return 404
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"error": map[string]interface{}{
-					"code":    "Not Found",
+					"code": "Not Found",
 					"message": map[string]interface{}{
 						"value": "Entity not found",
 					},
@@ -125,40 +125,40 @@ func TestProgramEntityRetrieval(t *testing.T) {
 		client.SetBasicAuth("test", "test")
 
 		// Get entity
-		result, err := client.GetEntity(context.Background(), "PROGRAMSet", 
+		result, err := client.GetEntity(context.Background(), "PROGRAMSet",
 			map[string]interface{}{"Program": programName}, nil)
-		
+
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		
+
 		// Verify response
 		if entity, ok := result.Value.(map[string]interface{}); ok {
 			assert.Equal(t, programName, entity["Program"])
 			assert.Equal(t, "$VIBE_TEST", entity["Package"])
 		}
 	})
-	
+
 	t.Run("Integration", func(t *testing.T) {
 		// Skip if environment variables are not set
 		odataURL := os.Getenv("ODATA_URL")
 		odataUser := os.Getenv("ODATA_USER")
 		odataPass := os.Getenv("ODATA_PASS")
-		
+
 		if odataURL == "" || odataUser == "" || odataPass == "" {
 			t.Skip("Skipping integration test: ODATA_URL, ODATA_USER, ODATA_PASS not set")
 		}
-		
+
 		client := client.NewODataClient(odataURL, true)
 		client.SetBasicAuth(odataUser, odataPass)
-		
+
 		// Try to get a known program (the one we created in previous tests)
 		// Note: This might fail due to authorization, which is expected
-		result, err := client.GetEntity(context.Background(), "PROGRAMSet", 
+		result, err := client.GetEntity(context.Background(), "PROGRAMSet",
 			map[string]interface{}{"Program": programName}, nil)
-		
+
 		if err != nil {
 			errStr := err.Error()
-			
+
 			// Check if it's an authorization issue
 			if strings.Contains(errStr, "404") || strings.Contains(errStr, "not found") {
 				t.Logf("Expected behavior: Entity not visible due to authorization. Error: %v", err)
@@ -170,7 +170,7 @@ func TestProgramEntityRetrieval(t *testing.T) {
 			// If we can retrieve it, verify the data
 			t.Log("Successfully retrieved program entity")
 			assert.NotNil(t, result)
-			
+
 			if entity, ok := result.Value.(map[string]interface{}); ok {
 				t.Logf("Retrieved program: %+v", entity)
 			}
@@ -197,14 +197,14 @@ func TestEntityFilter(t *testing.T) {
 				expectedFilter: "Package%20eq%20%27%24VIBE_TEST%27",
 			},
 		}
-		
+
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				var capturedQuery string
-				
+
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					capturedQuery = r.URL.RawQuery
-					
+
 					// Return empty result
 					w.WriteHeader(http.StatusOK)
 					json.NewEncoder(w).Encode(map[string]interface{}{
@@ -214,14 +214,14 @@ func TestEntityFilter(t *testing.T) {
 					})
 				}))
 				defer server.Close()
-				
+
 				client := client.NewODataClient(server.URL, false)
 				client.SetBasicAuth("test", "test")
-				
+
 				// Query with filter
-				_, err := client.GetEntitySet(context.Background(), "PROGRAMSet", 
+				_, err := client.GetEntitySet(context.Background(), "PROGRAMSet",
 					map[string]string{"$filter": tt.filter})
-				
+
 				require.NoError(t, err)
 				assert.Contains(t, capturedQuery, tt.expectedFilter)
 			})

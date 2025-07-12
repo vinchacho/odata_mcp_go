@@ -12,8 +12,8 @@ import (
 
 // EDMX represents the root EDMX document
 type EDMX struct {
-	XMLName   xml.Name `xml:"Edmx"`
-	Version   string   `xml:"Version,attr"`
+	XMLName      xml.Name     `xml:"Edmx"`
+	Version      string       `xml:"Version,attr"`
 	DataServices DataServices `xml:"DataServices"`
 }
 
@@ -25,26 +25,26 @@ type DataServices struct {
 
 // Schema contains entity types, entity sets, and function imports
 type Schema struct {
-	XMLName           xml.Name           `xml:"Schema"`
-	Namespace         string             `xml:"Namespace,attr"`
-	EntityTypes       []EntityType       `xml:"EntityType"`
-	EntityContainer   EntityContainer    `xml:"EntityContainer"`
-	FunctionImports   []FunctionImport   `xml:"FunctionImport"`
+	XMLName         xml.Name         `xml:"Schema"`
+	Namespace       string           `xml:"Namespace,attr"`
+	EntityTypes     []EntityType     `xml:"EntityType"`
+	EntityContainer EntityContainer  `xml:"EntityContainer"`
+	FunctionImports []FunctionImport `xml:"FunctionImport"`
 }
 
 // EntityType represents an OData entity type
 type EntityType struct {
-	XMLName    xml.Name    `xml:"EntityType"`
-	Name       string      `xml:"Name,attr"`
-	Key        Key         `xml:"Key"`
-	Properties []Property  `xml:"Property"`
+	XMLName              xml.Name             `xml:"EntityType"`
+	Name                 string               `xml:"Name,attr"`
+	Key                  Key                  `xml:"Key"`
+	Properties           []Property           `xml:"Property"`
 	NavigationProperties []NavigationProperty `xml:"NavigationProperty"`
 }
 
 // Key contains key properties
 type Key struct {
-	XMLName        xml.Name        `xml:"Key"`
-	PropertyRefs   []PropertyRef   `xml:"PropertyRef"`
+	XMLName      xml.Name      `xml:"Key"`
+	PropertyRefs []PropertyRef `xml:"PropertyRef"`
 }
 
 // PropertyRef references a key property
@@ -55,13 +55,13 @@ type PropertyRef struct {
 
 // Property represents an entity property
 type Property struct {
-	XMLName    xml.Name `xml:"Property"`
-	Name       string   `xml:"Name,attr"`
-	Type       string   `xml:"Type,attr"`
-	Nullable   string   `xml:"Nullable,attr"`
-	MaxLength  string   `xml:"MaxLength,attr"`
-	Precision  string   `xml:"Precision,attr"`
-	Scale      string   `xml:"Scale,attr"`
+	XMLName   xml.Name `xml:"Property"`
+	Name      string   `xml:"Name,attr"`
+	Type      string   `xml:"Type,attr"`
+	Nullable  string   `xml:"Nullable,attr"`
+	MaxLength string   `xml:"MaxLength,attr"`
+	Precision string   `xml:"Precision,attr"`
+	Scale     string   `xml:"Scale,attr"`
 }
 
 // NavigationProperty represents a navigation property
@@ -119,7 +119,7 @@ func ParseMetadata(data []byte, serviceRoot string) (*models.ODataMetadata, erro
 	if IsODataV4(data) {
 		return ParseMetadataV4(data, serviceRoot)
 	}
-	
+
 	// Parse as OData v2
 	var edmx EDMX
 	if err := xml.Unmarshal(data, &edmx); err != nil {
@@ -127,7 +127,7 @@ func ParseMetadata(data []byte, serviceRoot string) (*models.ODataMetadata, erro
 	}
 
 	schema := edmx.DataServices.Schema
-	
+
 	metadata := &models.ODataMetadata{
 		ServiceRoot:     serviceRoot,
 		EntityTypes:     make(map[string]*models.EntityType),
@@ -214,8 +214,8 @@ func parseEntitySet(es EntitySet, namespace string) *models.EntitySet {
 		Creatable:  es.Creatable != "false", // Default to true
 		Updatable:  es.Updatable != "false", // Default to true
 		Deletable:  es.Deletable != "false", // Default to true
-		Searchable: es.Searchable == "true",  // Default to false
-		Pageable:   es.Pageable != "false",   // Default to true
+		Searchable: es.Searchable == "true", // Default to false
+		Pageable:   es.Pageable != "false",  // Default to true
 	}
 
 	return entitySet

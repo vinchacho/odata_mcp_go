@@ -61,12 +61,12 @@ func parseV4Response(response map[string]interface{}) interface{} {
 		// It's already in v4 format
 		return response
 	}
-	
+
 	// Check if it's a single entity (has @odata.context)
 	if _, hasContext := response["@odata.context"]; hasContext {
 		return response
 	}
-	
+
 	// Otherwise return as-is
 	return response
 }
@@ -82,11 +82,11 @@ func parseODataError(errorData interface{}) error {
 		} `json:"message"`
 		InnerError interface{} `json:"innererror"`
 	}
-	
+
 	if err := json.Unmarshal(errorBytes, &odataError); err == nil && odataError.Message.Value != "" {
 		return fmt.Errorf("OData error %s: %s", odataError.Code, odataError.Message.Value)
 	}
-	
+
 	// Try v4 error format
 	var v4Error struct {
 		Code    string `json:"code"`
@@ -98,11 +98,11 @@ func parseODataError(errorData interface{}) error {
 			Target  string `json:"target"`
 		} `json:"details"`
 	}
-	
+
 	if err := json.Unmarshal(errorBytes, &v4Error); err == nil && v4Error.Message != "" {
 		return fmt.Errorf("OData error %s: %s", v4Error.Code, v4Error.Message)
 	}
-	
+
 	return fmt.Errorf("OData error: %v", errorData)
 }
 
@@ -128,7 +128,7 @@ func extractEntityKey(entity map[string]interface{}, keyProperties []string) (st
 	if len(keyProperties) == 0 {
 		return "", fmt.Errorf("no key properties defined")
 	}
-	
+
 	if len(keyProperties) == 1 {
 		// Single key
 		key := keyProperties[0]
@@ -137,7 +137,7 @@ func extractEntityKey(entity map[string]interface{}, keyProperties []string) (st
 		}
 		return "", fmt.Errorf("key property %s not found", key)
 	}
-	
+
 	// Composite key
 	var keyParts []string
 	for _, key := range keyProperties {

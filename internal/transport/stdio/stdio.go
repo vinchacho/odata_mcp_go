@@ -59,7 +59,7 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 					if msgID == nil || string(msgID) == "null" {
 						msgID = json.RawMessage("0")
 					}
-					
+
 					// Send error response
 					errorResponse := &transport.Message{
 						JSONRPC: "2.0",
@@ -92,7 +92,7 @@ func (t *StdioTransport) ReadMessage() (*transport.Message, error) {
 	// Trace raw input
 	if t.tracer != nil {
 		t.tracer.Log("TRANSPORT_IN", "Raw message received", map[string]interface{}{
-			"raw": string(line),
+			"raw":  string(line),
 			"size": len(line),
 		})
 	}
@@ -110,9 +110,9 @@ func (t *StdioTransport) ReadMessage() (*transport.Message, error) {
 	// Trace parsed message
 	if t.tracer != nil {
 		t.tracer.Log("TRANSPORT_PARSED", "Message parsed", map[string]interface{}{
-			"method": msg.Method,
-			"id": msg.ID,
-			"jsonrpc": msg.JSONRPC,
+			"method":     msg.Method,
+			"id":         msg.ID,
+			"jsonrpc":    msg.JSONRPC,
 			"has_params": len(msg.Params) > 0,
 		})
 	}
@@ -125,10 +125,10 @@ func (t *StdioTransport) WriteMessage(msg *transport.Message) error {
 	// Trace outgoing message
 	if t.tracer != nil {
 		t.tracer.Log("TRANSPORT_OUT", "Sending message", map[string]interface{}{
-			"id": msg.ID,
+			"id":         msg.ID,
 			"has_result": msg.Result != nil,
-			"has_error": msg.Error != nil,
-			"method": msg.Method,
+			"has_error":  msg.Error != nil,
+			"method":     msg.Method,
 		})
 	}
 
@@ -143,7 +143,7 @@ func (t *StdioTransport) WriteMessage(msg *transport.Message) error {
 	// Trace raw output
 	if t.tracer != nil {
 		t.tracer.Log("TRANSPORT_RAW_OUT", "Raw output", map[string]interface{}{
-			"raw": string(data),
+			"raw":  string(data),
 			"size": len(data),
 		})
 	}

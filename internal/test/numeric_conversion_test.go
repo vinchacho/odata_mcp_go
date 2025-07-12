@@ -24,7 +24,7 @@ func TestIsLikelyDecimalField(t *testing.T) {
 		{"price_amt", true},
 		{"Weight", true},
 		{"Volume", true},
-		
+
 		// Should NOT be detected as decimal
 		{"ProductID", false},
 		{"CustomerName", false},
@@ -60,7 +60,7 @@ func TestConvertNumericToString(t *testing.T) {
 
 	for _, test := range tests {
 		result := utils.ConvertNumericToString(test.input)
-		
+
 		if test.isString {
 			str, ok := result.(string)
 			if !ok {
@@ -169,7 +169,7 @@ func TestJSONMarshalAfterConversion(t *testing.T) {
 	// Verify the JSON contains strings, not numbers
 	var parsed map[string]interface{}
 	json.Unmarshal(jsonData, &parsed)
-	
+
 	if _, ok := parsed["Quantity"].(string); !ok {
 		t.Errorf("Quantity is not a string in JSON output")
 	}

@@ -11,7 +11,7 @@ import (
 var (
 	// Regex for parsing OData v2 legacy date format: /Date(milliseconds[+/-offset])/
 	odataLegacyDateRegex = regexp.MustCompile(`^/Date\((-?\d+)([\+\-]\d{4})?\)/$`)
-	
+
 	// Common date field names that typically contain dates in SAP systems
 	dateFieldPatterns = []string{
 		"Date", "date", "DATE",
@@ -48,16 +48,16 @@ func ParseODataLegacyDate(s string) (milliseconds int64, offset string, ok bool)
 	if len(matches) < 2 {
 		return 0, "", false
 	}
-	
+
 	ms, err := strconv.ParseInt(matches[1], 10, 64)
 	if err != nil {
 		return 0, "", false
 	}
-	
+
 	if len(matches) > 2 && matches[2] != "" {
 		offset = matches[2]
 	}
-	
+
 	return ms, offset, true
 }
 
@@ -67,7 +67,7 @@ func ConvertODataLegacyToISO(legacy string) string {
 	if !ok {
 		return legacy // Return as-is if not valid legacy format
 	}
-	
+
 	t := time.UnixMilli(ms).UTC()
 	return t.Format(time.RFC3339)
 }
@@ -82,21 +82,21 @@ func ConvertISOToODataLegacy(iso string) string {
 		"2006-01-02T15:04:05Z07:00",
 		"2006-01-02",
 	}
-	
+
 	var t time.Time
 	var err error
-	
+
 	for _, format := range formats {
 		t, err = time.Parse(format, iso)
 		if err == nil {
 			break
 		}
 	}
-	
+
 	if err != nil {
 		return iso // Return as-is if not valid ISO format
 	}
-	
+
 	ms := t.UnixMilli()
 	return fmt.Sprintf("/Date(%d)/", ms)
 }
@@ -106,7 +106,7 @@ func IsISODateTime(s string) bool {
 	if len(s) < 10 {
 		return false
 	}
-	
+
 	// Check for YYYY-MM-DD pattern
 	if len(s) >= 10 && s[4] == '-' && s[7] == '-' {
 		// Could be date only or datetime
@@ -117,7 +117,7 @@ func IsISODateTime(s string) bool {
 			return true // DateTime
 		}
 	}
-	
+
 	return false
 }
 
@@ -136,11 +136,11 @@ func IsLikelyDateField(fieldName string) bool {
 // If toISO is false, converts from ISO to OData legacy format
 func ConvertDatesInMap(data map[string]interface{}, toISO bool) map[string]interface{} {
 	result := make(map[string]interface{})
-	
+
 	for key, value := range data {
 		result[key] = ConvertDateValue(value, toISO, key)
 	}
-	
+
 	return result
 }
 
@@ -155,11 +155,11 @@ func ConvertDateValue(value interface{}, toISO bool, fieldName string) interface
 			return ConvertISOToODataLegacy(v)
 		}
 		return v
-		
+
 	case map[string]interface{}:
 		// Recursively convert nested map
 		return ConvertDatesInMap(v, toISO)
-		
+
 	case []interface{}:
 		// Convert each item in array
 		result := make([]interface{}, len(v))
@@ -167,7 +167,7 @@ func ConvertDateValue(value interface{}, toISO bool, fieldName string) interface
 			result[i] = ConvertDateValue(item, toISO, "")
 		}
 		return result
-		
+
 	default:
 		// Return other types as-is
 		return value
@@ -187,7 +187,7 @@ func FormatDateForOData(t time.Time, edmType string, useLegacyFormat bool) strin
 			return fmt.Sprintf("/Date(%d)/", t.UnixMilli())
 		}
 		return t.Format("2006-01-02T15:04:05")
-		
+
 	case "Edm.DateTimeOffset":
 		if useLegacyFormat {
 			// Include timezone offset in legacy format
@@ -203,14 +203,14 @@ func FormatDateForOData(t time.Time, edmType string, useLegacyFormat bool) strin
 			return fmt.Sprintf("/Date(%d%s%02d%02d)/", t.UnixMilli(), sign, offsetHours, offsetMinutes)
 		}
 		return t.Format(time.RFC3339)
-		
+
 	case "Edm.Date":
 		return t.Format("2006-01-02")
-		
+
 	case "Edm.Time":
 		// OData v2 uses ISO 8601 duration format for time
 		return fmt.Sprintf("PT%dH%dM%dS", t.Hour(), t.Minute(), t.Second())
-		
+
 	default:
 		return t.Format(time.RFC3339)
 	}

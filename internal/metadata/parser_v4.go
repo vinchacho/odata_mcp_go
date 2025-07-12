@@ -24,11 +24,11 @@ type DataServicesV4 struct {
 
 // SchemaV4 contains entity types, entity sets, and function imports for OData v4
 type SchemaV4 struct {
-	XMLName          xml.Name           `xml:"Schema"`
-	Namespace        string             `xml:"Namespace,attr"`
-	EntityTypes      []EntityTypeV4     `xml:"EntityType"`
-	ComplexTypes     []ComplexTypeV4    `xml:"ComplexType"`
-	EnumTypes        []EnumTypeV4       `xml:"EnumType"`
+	XMLName          xml.Name            `xml:"Schema"`
+	Namespace        string              `xml:"Namespace,attr"`
+	EntityTypes      []EntityTypeV4      `xml:"EntityType"`
+	ComplexTypes     []ComplexTypeV4     `xml:"ComplexType"`
+	EnumTypes        []EnumTypeV4        `xml:"EnumType"`
 	EntityContainers []EntityContainerV4 `xml:"EntityContainer"`
 	Functions        []FunctionV4        `xml:"Function"`
 	Actions          []ActionV4          `xml:"Action"`
@@ -59,11 +59,11 @@ type ComplexTypeV4 struct {
 
 // EnumTypeV4 represents an OData v4 enum type
 type EnumTypeV4 struct {
-	XMLName      xml.Name      `xml:"EnumType"`
-	Name         string        `xml:"Name,attr"`
-	UnderlyingType string      `xml:"UnderlyingType,attr"`
-	IsFlags      string        `xml:"IsFlags,attr"`
-	Members      []EnumMemberV4 `xml:"Member"`
+	XMLName        xml.Name       `xml:"EnumType"`
+	Name           string         `xml:"Name,attr"`
+	UnderlyingType string         `xml:"UnderlyingType,attr"`
+	IsFlags        string         `xml:"IsFlags,attr"`
+	Members        []EnumMemberV4 `xml:"Member"`
 }
 
 // EnumMemberV4 represents a member of an enum type
@@ -75,7 +75,7 @@ type EnumMemberV4 struct {
 
 // KeyV4 contains key properties for OData v4
 type KeyV4 struct {
-	XMLName      xml.Name       `xml:"Key"`
+	XMLName      xml.Name        `xml:"Key"`
 	PropertyRefs []PropertyRefV4 `xml:"PropertyRef"`
 }
 
@@ -87,51 +87,51 @@ type PropertyRefV4 struct {
 
 // PropertyV4 represents an entity property in OData v4
 type PropertyV4 struct {
-	XMLName       xml.Name `xml:"Property"`
-	Name          string   `xml:"Name,attr"`
-	Type          string   `xml:"Type,attr"`
-	Nullable      string   `xml:"Nullable,attr"`
-	MaxLength     string   `xml:"MaxLength,attr"`
-	Precision     string   `xml:"Precision,attr"`
-	Scale         string   `xml:"Scale,attr"`
-	Unicode       string   `xml:"Unicode,attr"`
-	DefaultValue  string   `xml:"DefaultValue,attr"`
+	XMLName      xml.Name `xml:"Property"`
+	Name         string   `xml:"Name,attr"`
+	Type         string   `xml:"Type,attr"`
+	Nullable     string   `xml:"Nullable,attr"`
+	MaxLength    string   `xml:"MaxLength,attr"`
+	Precision    string   `xml:"Precision,attr"`
+	Scale        string   `xml:"Scale,attr"`
+	Unicode      string   `xml:"Unicode,attr"`
+	DefaultValue string   `xml:"DefaultValue,attr"`
 }
 
 // NavigationPropertyV4 represents a navigation property in OData v4
 type NavigationPropertyV4 struct {
-	XMLName              xml.Name `xml:"NavigationProperty"`
-	Name                 string   `xml:"Name,attr"`
-	Type                 string   `xml:"Type,attr"`
-	Nullable             string   `xml:"Nullable,attr"`
-	Partner              string   `xml:"Partner,attr"`
-	ContainsTarget       string   `xml:"ContainsTarget,attr"`
+	XMLName        xml.Name `xml:"NavigationProperty"`
+	Name           string   `xml:"Name,attr"`
+	Type           string   `xml:"Type,attr"`
+	Nullable       string   `xml:"Nullable,attr"`
+	Partner        string   `xml:"Partner,attr"`
+	ContainsTarget string   `xml:"ContainsTarget,attr"`
 }
 
 // EntityContainerV4 contains entity sets and singletons for OData v4
 type EntityContainerV4 struct {
-	XMLName              xml.Name               `xml:"EntityContainer"`
-	Name                 string                 `xml:"Name,attr"`
-	Extends              string                 `xml:"Extends,attr"`
-	EntitySets           []EntitySetV4          `xml:"EntitySet"`
-	Singletons           []SingletonV4          `xml:"Singleton"`
-	FunctionImports      []FunctionImportV4     `xml:"FunctionImport"`
-	ActionImports        []ActionImportV4       `xml:"ActionImport"`
+	XMLName         xml.Name           `xml:"EntityContainer"`
+	Name            string             `xml:"Name,attr"`
+	Extends         string             `xml:"Extends,attr"`
+	EntitySets      []EntitySetV4      `xml:"EntitySet"`
+	Singletons      []SingletonV4      `xml:"Singleton"`
+	FunctionImports []FunctionImportV4 `xml:"FunctionImport"`
+	ActionImports   []ActionImportV4   `xml:"ActionImport"`
 }
 
 // EntitySetV4 represents an OData v4 entity set
 type EntitySetV4 struct {
-	XMLName                  xml.Name                     `xml:"EntitySet"`
-	Name                     string                       `xml:"Name,attr"`
-	EntityType               string                       `xml:"EntityType,attr"`
+	XMLName                    xml.Name                    `xml:"EntitySet"`
+	Name                       string                      `xml:"Name,attr"`
+	EntityType                 string                      `xml:"EntityType,attr"`
 	NavigationPropertyBindings []NavigationPropertyBinding `xml:"NavigationPropertyBinding"`
 }
 
 // SingletonV4 represents an OData v4 singleton
 type SingletonV4 struct {
-	XMLName                  xml.Name                     `xml:"Singleton"`
-	Name                     string                       `xml:"Name,attr"`
-	Type                     string                       `xml:"Type,attr"`
+	XMLName                    xml.Name                    `xml:"Singleton"`
+	Name                       string                      `xml:"Name,attr"`
+	Type                       string                      `xml:"Type,attr"`
 	NavigationPropertyBindings []NavigationPropertyBinding `xml:"NavigationPropertyBinding"`
 }
 
@@ -144,19 +144,19 @@ type NavigationPropertyBinding struct {
 
 // FunctionImportV4 represents an OData v4 function import
 type FunctionImportV4 struct {
-	XMLName      xml.Name `xml:"FunctionImport"`
-	Name         string   `xml:"Name,attr"`
-	Function     string   `xml:"Function,attr"`
-	EntitySet    string   `xml:"EntitySet,attr"`
-	IncludeInServiceDocument string `xml:"IncludeInServiceDocument,attr"`
+	XMLName                  xml.Name `xml:"FunctionImport"`
+	Name                     string   `xml:"Name,attr"`
+	Function                 string   `xml:"Function,attr"`
+	EntitySet                string   `xml:"EntitySet,attr"`
+	IncludeInServiceDocument string   `xml:"IncludeInServiceDocument,attr"`
 }
 
 // ActionImportV4 represents an OData v4 action import
 type ActionImportV4 struct {
-	XMLName      xml.Name `xml:"ActionImport"`
-	Name         string   `xml:"Name,attr"`
-	Action       string   `xml:"Action,attr"`
-	EntitySet    string   `xml:"EntitySet,attr"`
+	XMLName   xml.Name `xml:"ActionImport"`
+	Name      string   `xml:"Name,attr"`
+	Action    string   `xml:"Action,attr"`
+	EntitySet string   `xml:"EntitySet,attr"`
 }
 
 // FunctionV4 represents an OData v4 function
@@ -171,11 +171,11 @@ type FunctionV4 struct {
 
 // ActionV4 represents an OData v4 action
 type ActionV4 struct {
-	XMLName      xml.Name      `xml:"Action"`
-	Name         string        `xml:"Name,attr"`
-	IsBound      string        `xml:"IsBound,attr"`
-	Parameters   []ParameterV4 `xml:"Parameter"`
-	ReturnType   *ReturnTypeV4 `xml:"ReturnType"`
+	XMLName    xml.Name      `xml:"Action"`
+	Name       string        `xml:"Name,attr"`
+	IsBound    string        `xml:"IsBound,attr"`
+	Parameters []ParameterV4 `xml:"Parameter"`
+	ReturnType *ReturnTypeV4 `xml:"ReturnType"`
 }
 
 // ParameterV4 represents a function/action parameter in OData v4
@@ -207,7 +207,7 @@ func ParseMetadataV4(data []byte, serviceRoot string) (*models.ODataMetadata, er
 	// Find the main schema and container
 	var mainSchema *SchemaV4
 	var mainContainer *EntityContainerV4
-	
+
 	for i := range edmx.DataServices.Schemas {
 		schema := &edmx.DataServices.Schemas[i]
 		if len(schema.EntityContainers) > 0 {
@@ -216,11 +216,11 @@ func ParseMetadataV4(data []byte, serviceRoot string) (*models.ODataMetadata, er
 			break
 		}
 	}
-	
+
 	if mainSchema == nil || mainContainer == nil {
 		return nil, fmt.Errorf("no entity container found in metadata")
 	}
-	
+
 	metadata := &models.ODataMetadata{
 		ServiceRoot:     serviceRoot,
 		EntityTypes:     make(map[string]*models.EntityType),
@@ -335,14 +335,14 @@ func parseFunctionImportV4(fi FunctionImportV4, functions []FunctionV4) *models.
 		parts := strings.Split(functionName, ".")
 		functionName = parts[len(parts)-1]
 	}
-	
+
 	for i := range functions {
 		if functions[i].Name == functionName {
 			function = &functions[i]
 			break
 		}
 	}
-	
+
 	if function == nil {
 		return nil
 	}
@@ -383,14 +383,14 @@ func parseActionImportV4(ai ActionImportV4, actions []ActionV4) *models.Function
 		parts := strings.Split(actionName, ".")
 		actionName = parts[len(parts)-1]
 	}
-	
+
 	for i := range actions {
 		if actions[i].Name == actionName {
 			action = &actions[i]
 			break
 		}
 	}
-	
+
 	if action == nil {
 		return nil
 	}
@@ -429,12 +429,12 @@ func normalizeTypeV4(typeName string) string {
 		innerType := typeName[11 : len(typeName)-1]
 		return "Collection(" + normalizeTypeV4(innerType) + ")"
 	}
-	
+
 	// If it's already an Edm type, return as-is
 	if strings.HasPrefix(typeName, "Edm.") {
 		return typeName
 	}
-	
+
 	// Remove namespace prefix if present but keep Edm prefix
 	if strings.Contains(typeName, ".") {
 		parts := strings.Split(typeName, ".")
@@ -445,7 +445,7 @@ func normalizeTypeV4(typeName string) string {
 		// For complex types, keep just the type name
 		return parts[len(parts)-1]
 	}
-	
+
 	return typeName
 }
 

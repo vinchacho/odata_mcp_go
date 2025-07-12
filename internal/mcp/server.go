@@ -36,7 +36,7 @@ type Server struct {
 	name        string
 	version     string
 	tools       map[string]*Tool
-	toolOrder   []string    // Maintains insertion order
+	toolOrder   []string // Maintains insertion order
 	handlers    map[string]ToolHandler
 	transport   transport.Transport
 	ctx         context.Context
@@ -49,7 +49,7 @@ type Server struct {
 func NewServer(name, version string) *Server {
 	// Disable logging to avoid contaminating stdio communication
 	log.SetOutput(ioutil.Discard)
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
 		name:      name,
@@ -66,12 +66,12 @@ func NewServer(name, version string) *Server {
 func (s *Server) AddTool(tool *Tool, handler ToolHandler) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	// Only add to order if it's a new tool
 	if _, exists := s.tools[tool.Name]; !exists {
 		s.toolOrder = append(s.toolOrder, tool.Name)
 	}
-	
+
 	s.tools[tool.Name] = tool
 	s.handlers[tool.Name] = handler
 }
@@ -80,10 +80,10 @@ func (s *Server) AddTool(tool *Tool, handler ToolHandler) {
 func (s *Server) RemoveTool(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	delete(s.tools, name)
 	delete(s.handlers, name)
-	
+
 	// Remove from order slice
 	for i, toolName := range s.toolOrder {
 		if toolName == name {
@@ -97,7 +97,7 @@ func (s *Server) RemoveTool(name string) {
 func (s *Server) GetTools() []*Tool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	tools := make([]*Tool, 0, len(s.tools))
 	for _, name := range s.toolOrder {
 		if tool, exists := s.tools[name]; exists {
@@ -119,7 +119,7 @@ func (s *Server) Run() error {
 	if s.transport == nil {
 		return fmt.Errorf("transport not set")
 	}
-	
+
 	// Start the transport with our message handler
 	return s.transport.Start(s.ctx)
 }
@@ -130,14 +130,14 @@ func (s *Server) HandleMessage(ctx context.Context, msg *transport.Message) (*tr
 	if msg.JSONRPC != "2.0" {
 		return s.createErrorResponse(msg.ID, -32600, "Invalid Request", "JSON-RPC version must be 2.0"), nil
 	}
-	
+
 	// Convert transport message to internal request
 	req := &Request{
 		JSONRPC: msg.JSONRPC,
 		ID:      msg.ID,
 		Method:  msg.Method,
 	}
-	
+
 	// Parse params if present
 	if len(msg.Params) > 0 {
 		var params map[string]interface{}
@@ -149,13 +149,13 @@ func (s *Server) HandleMessage(ctx context.Context, msg *transport.Message) (*tr
 		// Initialize empty params map
 		req.Params = make(map[string]interface{})
 	}
-	
+
 	// Handle notifications (no response expected)
 	if req.Method == "initialized" {
 		s.handleInitialized(req)
 		return nil, nil
 	}
-	
+
 	// Handle requests
 	switch req.Method {
 	case "initialize":
@@ -183,7 +183,7 @@ func (s *Server) Stop() {
 // createErrorResponse creates an error response message
 func (s *Server) createErrorResponse(id interface{}, code int, message, data string) *transport.Message {
 	var idBytes json.RawMessage
-	
+
 	// Handle different ID types
 	switch v := id.(type) {
 	case json.RawMessage:
@@ -198,7 +198,7 @@ func (s *Server) createErrorResponse(id interface{}, code int, message, data str
 	default:
 		idBytes, _ = json.Marshal(id)
 	}
-	
+
 	return &transport.Message{
 		JSONRPC: "2.0",
 		ID:      idBytes,
@@ -213,7 +213,7 @@ func (s *Server) createErrorResponse(id interface{}, code int, message, data str
 // createResponse creates a success response message
 func (s *Server) createResponse(id interface{}, result interface{}) (*transport.Message, error) {
 	var idBytes json.RawMessage
-	
+
 	// Handle different ID types - convert null to 0 for Claude Desktop compatibility
 	switch v := id.(type) {
 	case json.RawMessage:
@@ -228,12 +228,12 @@ func (s *Server) createResponse(id interface{}, result interface{}) (*transport.
 	default:
 		idBytes, _ = json.Marshal(id)
 	}
-	
+
 	resultBytes, err := json.Marshal(result)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &transport.Message{
 		JSONRPC: "2.0",
 		ID:      idBytes,
@@ -250,7 +250,7 @@ func (s *Server) handleInitializeV2(req *Request) (*transport.Message, error) {
 				"listChanged": false,
 			},
 			"resources": map[string]interface{}{
-				"subscribe": false,
+				"subscribe":   false,
 				"listChanged": false,
 			},
 			"tools": map[string]interface{}{
@@ -262,7 +262,7 @@ func (s *Server) handleInitializeV2(req *Request) (*transport.Message, error) {
 			"version": s.version,
 		},
 	}
-	
+
 	return s.createResponse(req.ID, result)
 }
 
@@ -285,11 +285,11 @@ func (s *Server) handleToolsListV2(req *Request) (*transport.Message, error) {
 		}
 	}
 	s.mu.RUnlock()
-	
+
 	result := map[string]interface{}{
 		"tools": tools,
 	}
-	
+
 	return s.createResponse(req.ID, result)
 }
 
@@ -299,27 +299,27 @@ func (s *Server) handleToolsCallV2(req *Request) (*transport.Message, error) {
 	if !ok {
 		params = make(map[string]interface{})
 	}
-	
+
 	name, ok := req.Params["name"].(string)
 	if !ok {
 		return s.createErrorResponse(req.ID, -32602, "Invalid params", "Missing tool name"), nil
 	}
-	
+
 	s.mu.RLock()
 	handler, exists := s.handlers[name]
 	s.mu.RUnlock()
-	
+
 	if !exists {
 		return s.createErrorResponse(req.ID, -32602, "Invalid params", fmt.Sprintf("Tool not found: %s", name)), nil
 	}
-	
+
 	result, err := handler(s.ctx, params)
 	if err != nil {
 		// Map OData errors to appropriate MCP error codes and provide detailed context
 		errorCode, errorMessage, errorData := s.categorizeError(err, name)
 		return s.createErrorResponse(req.ID, errorCode, errorMessage, errorData), nil
 	}
-	
+
 	response := map[string]interface{}{
 		"content": []map[string]interface{}{
 			{
@@ -328,7 +328,7 @@ func (s *Server) handleToolsCallV2(req *Request) (*transport.Message, error) {
 			},
 		},
 	}
-	
+
 	return s.createResponse(req.ID, response)
 }
 
@@ -361,82 +361,81 @@ func (s *Server) SendNotification(method string, params interface{}) error {
 	if s.transport == nil {
 		return fmt.Errorf("transport not set")
 	}
-	
+
 	paramsBytes, err := json.Marshal(params)
 	if err != nil {
 		return err
 	}
-	
+
 	msg := &transport.Message{
 		JSONRPC: "2.0",
 		Method:  method,
 		Params:  paramsBytes,
 	}
-	
+
 	return s.transport.WriteMessage(msg)
 }
 
 // categorizeError maps OData errors to appropriate MCP error codes and enhances error messages
 func (s *Server) categorizeError(err error, toolName string) (int, string, string) {
 	errStr := err.Error()
-	
+
 	// Create a comprehensive error message that includes both context and details
 	// The MCP client will see this as the main error message
 	fullErrorMessage := fmt.Sprintf("OData MCP tool '%s' failed: %s", toolName, errStr)
-	
+
 	// Create structured data for programmatic use (though most clients ignore this)
 	errorData := fmt.Sprintf("{\"tool\":\"%s\",\"original_error\":\"%s\"}", toolName, errStr)
-	
+
 	// Check for specific OData error patterns and map to appropriate MCP codes
 	switch {
 	case strings.Contains(errStr, "HTTP 400") || strings.Contains(errStr, "Bad Request"):
 		return -32602, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "HTTP 401") || strings.Contains(errStr, "Unauthorized"):
 		return -32603, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "HTTP 403") || strings.Contains(errStr, "Forbidden"):
 		return -32603, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "HTTP 404") || strings.Contains(errStr, "Not Found"):
 		return -32602, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "HTTP 409") || strings.Contains(errStr, "Conflict"):
 		return -32603, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "HTTP 422") || strings.Contains(errStr, "Unprocessable"):
 		return -32602, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "HTTP 429") || strings.Contains(errStr, "Too Many Requests"):
 		return -32603, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "HTTP 500") || strings.Contains(errStr, "Internal Server Error"):
 		return -32603, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "HTTP 502") || strings.Contains(errStr, "Bad Gateway"):
 		return -32603, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "HTTP 503") || strings.Contains(errStr, "Service Unavailable"):
 		return -32603, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "CSRF token"):
 		return -32603, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "timeout") || strings.Contains(errStr, "deadline exceeded"):
 		return -32603, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "connection refused") || strings.Contains(errStr, "network"):
 		return -32603, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "invalid metadata") || strings.Contains(errStr, "metadata"):
 		return -32603, fullErrorMessage, errorData
-		
+
 	case strings.Contains(errStr, "invalid entity") || strings.Contains(errStr, "entity not found"):
 		return -32602, fullErrorMessage, errorData
-		
+
 	default:
 		// Generic internal error with full context
 		return -32603, fullErrorMessage, errorData
 	}
 }
-

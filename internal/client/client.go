@@ -69,7 +69,7 @@ func (c *ODataClient) SetCookies(cookies map[string]string) {
 // buildRequest creates an HTTP request with proper headers and authentication
 func (c *ODataClient) buildRequest(ctx context.Context, method, endpoint string, body io.Reader) (*http.Request, error) {
 	fullURL := c.baseURL + strings.TrimPrefix(endpoint, "/")
-	
+
 	req, err := http.NewRequestWithContext(ctx, method, fullURL, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -95,7 +95,7 @@ func (c *ODataClient) buildRequest(ctx context.Context, method, endpoint string,
 			Value: value,
 		})
 	}
-	
+
 	// Add session cookies received from server
 	for _, cookie := range c.sessionCookies {
 		req.AddCookie(cookie)
@@ -129,7 +129,7 @@ func (c *ODataClient) doRequest(req *http.Request) (*http.Response, error) {
 		}
 		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
-	
+
 	return c.doRequestWithRetry(req, bodyBytes, false)
 }
 
@@ -166,19 +166,19 @@ func (c *ODataClient) doRequestWithRetry(req *http.Request, bodyBytes []byte, is
 		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		bodyStr := string(body)
-		
+
 		csrfFailed := strings.Contains(bodyStr, "CSRF token validation failed") ||
 			strings.Contains(strings.ToLower(bodyStr), "csrf") ||
 			strings.EqualFold(resp.Header.Get("x-csrf-token"), "required")
-		
+
 		if csrfFailed {
 			if c.verbose {
 				fmt.Fprintf(os.Stderr, "[VERBOSE] CSRF token validation failed, attempting to refetch...\n")
 			}
-			
+
 			// Clear the invalid token
 			c.csrfToken = ""
-			
+
 			// Try to fetch new CSRF token
 			if err := c.fetchCSRFToken(req.Context()); err != nil {
 				// Return original error with CSRF context
@@ -192,7 +192,7 @@ func (c *ODataClient) doRequestWithRetry(req *http.Request, bodyBytes []byte, is
 			}
 			return c.doRequestWithRetry(req, bodyBytes, true)
 		}
-		
+
 		// Not a CSRF error, recreate response with body
 		resp.Body = io.NopCloser(bytes.NewReader(body))
 	}
@@ -205,10 +205,10 @@ func (c *ODataClient) fetchCSRFToken(ctx context.Context) error {
 	if c.verbose {
 		fmt.Fprintf(os.Stderr, "[VERBOSE] Fetching CSRF token...\n")
 	}
-	
+
 	// Clear any existing CSRF token (Python behavior)
 	c.csrfToken = ""
-	
+
 	// Use service root for CSRF token fetching (more reliable than empty string)
 	req, err := c.buildRequest(ctx, constants.GET, "", nil)
 	if err != nil {
@@ -216,7 +216,7 @@ func (c *ODataClient) fetchCSRFToken(ctx context.Context) error {
 	}
 
 	req.Header.Set(constants.CSRFTokenHeader, constants.CSRFTokenFetch)
-	
+
 	if c.verbose {
 		fmt.Fprintf(os.Stderr, "[VERBOSE] Token fetch request: %s %s\n", req.Method, req.URL.String())
 		fmt.Fprintf(os.Stderr, "[VERBOSE] Token fetch headers: %v\n", req.Header)
@@ -228,7 +228,7 @@ func (c *ODataClient) fetchCSRFToken(ctx context.Context) error {
 		return fmt.Errorf("CSRF token request failed: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	// Store any session cookies from the response
 	if cookies := resp.Cookies(); len(cookies) > 0 {
 		c.sessionCookies = append(c.sessionCookies, cookies...)
@@ -239,7 +239,7 @@ func (c *ODataClient) fetchCSRFToken(ctx context.Context) error {
 			}
 		}
 	}
-	
+
 	if c.verbose {
 		fmt.Fprintf(os.Stderr, "[VERBOSE] Token fetch response status: %d\n", resp.StatusCode)
 		fmt.Fprintf(os.Stderr, "[VERBOSE] Token fetch response headers: %v\n", resp.Header)
@@ -316,15 +316,15 @@ func (c *ODataClient) GetMetadata(ctx context.Context) (*models.ODataMetadata, e
 // GetEntitySet retrieves entities from an entity set
 func (c *ODataClient) GetEntitySet(ctx context.Context, entitySet string, options map[string]string) (*models.ODataResponse, error) {
 	endpoint := entitySet
-	
+
 	// Build query parameters with standard OData v2 parameters
 	params := url.Values{}
-	
+
 	// Always add JSON format for consistent responses (v2 only)
 	if !c.isV4 {
 		params.Add(constants.QueryFormat, "json")
 	}
-	
+
 	// Add inline count for pagination support unless explicitly requesting count only
 	// OData v4 uses $count=true instead of $inlinecount
 	if !c.isV4 {
@@ -332,7 +332,7 @@ func (c *ODataClient) GetEntitySet(ctx context.Context, entitySet string, option
 			params.Add(constants.QueryInlineCount, "allpages")
 		}
 	}
-	
+
 	// Add user-provided parameters
 	for key, value := range options {
 		if value != "" {
@@ -350,7 +350,7 @@ func (c *ODataClient) GetEntitySet(ctx context.Context, entitySet string, option
 			params.Set(key, value) // Use Set to override defaults if needed
 		}
 	}
-	
+
 	if len(params) > 0 {
 		endpoint += "?" + encodeQueryParams(params)
 	}
@@ -650,7 +650,7 @@ func (c *ODataClient) parseODataResponse(resp *http.Response) (*models.ODataResp
 
 	// Convert to ODataResponse model
 	var odataResp models.ODataResponse
-	
+
 	switch v := parsedResponse.(type) {
 	case map[string]interface{}:
 		// Check for v4 format
@@ -751,28 +751,28 @@ func (c *ODataClient) parseErrorFromBody(body []byte, statusCode int) error {
 // buildDetailedError creates a comprehensive error message from OData error details
 func (c *ODataClient) buildDetailedError(odataErr *models.ODataError, statusCode int, rawBody []byte) error {
 	var errMsg strings.Builder
-	
+
 	// Start with basic error info
 	errMsg.WriteString(fmt.Sprintf("OData error (HTTP %d)", statusCode))
-	
+
 	// Add error code if available
 	if odataErr.Code != "" {
 		errMsg.WriteString(fmt.Sprintf(" [%s]", odataErr.Code))
 	}
-	
+
 	// Add main message
 	errMsg.WriteString(fmt.Sprintf(": %s", odataErr.Message))
-	
+
 	// Add target if available (which field/entity caused the error)
 	if odataErr.Target != "" {
 		errMsg.WriteString(fmt.Sprintf(" (target: %s)", odataErr.Target))
 	}
-	
+
 	// Add severity if available
 	if odataErr.Severity != "" {
 		errMsg.WriteString(fmt.Sprintf(" [severity: %s]", odataErr.Severity))
 	}
-	
+
 	// Add details if available
 	if len(odataErr.Details) > 0 {
 		errMsg.WriteString(" | Details: ")
@@ -786,7 +786,7 @@ func (c *ODataClient) buildDetailedError(odataErr *models.ODataError, statusCode
 			}
 		}
 	}
-	
+
 	// Add inner error info if available and verbose mode is on
 	if c.verbose && len(odataErr.InnerError) > 0 {
 		errMsg.WriteString(" | Inner error: ")
@@ -794,7 +794,7 @@ func (c *ODataClient) buildDetailedError(odataErr *models.ODataError, statusCode
 			errMsg.WriteString(string(innerErrBytes))
 		}
 	}
-	
+
 	return fmt.Errorf(errMsg.String())
 }
 
@@ -811,10 +811,10 @@ func (c *ODataClient) parseMetadataXML(data []byte) (*models.ODataMetadata, erro
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Set the client's v4 flag based on metadata version
 	c.isV4 = meta.Version == "4.0" || meta.Version == "4.01"
-	
+
 	return meta, nil
 }
 

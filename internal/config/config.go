@@ -37,30 +37,30 @@ type Config struct {
 	Debug     bool `mapstructure:"debug"`
 	SortTools bool `mapstructure:"sort_tools"`
 	Trace     bool `mapstructure:"trace"`
-	
+
 	// Response enhancement options
-	PaginationHints  bool `mapstructure:"pagination_hints"`   // Add pagination support with hints
-	LegacyDates      bool `mapstructure:"legacy_dates"`       // Support epoch timestamp format
-	NoLegacyDates    bool `mapstructure:"no_legacy_dates"`    // Disable legacy date format
-	VerboseErrors    bool `mapstructure:"verbose_errors"`     // Detailed error context
-	ResponseMetadata bool `mapstructure:"response_metadata"`  // Include __metadata in responses
-	
+	PaginationHints  bool `mapstructure:"pagination_hints"`  // Add pagination support with hints
+	LegacyDates      bool `mapstructure:"legacy_dates"`      // Support epoch timestamp format
+	NoLegacyDates    bool `mapstructure:"no_legacy_dates"`   // Disable legacy date format
+	VerboseErrors    bool `mapstructure:"verbose_errors"`    // Detailed error context
+	ResponseMetadata bool `mapstructure:"response_metadata"` // Include __metadata in responses
+
 	// Response size limits
 	MaxResponseSize int `mapstructure:"max_response_size"` // Maximum response size in bytes
 	MaxItems        int `mapstructure:"max_items"`         // Maximum number of items in response
-	
+
 	// Read-only mode flags
 	ReadOnly             bool `mapstructure:"read_only"`               // Read-only mode: hide all modifying operations
 	ReadOnlyButFunctions bool `mapstructure:"read_only_but_functions"` // Read-only mode but allow function imports
-	
+
 	// Hint configuration
 	HintsFile string `mapstructure:"hints_file"` // Path to hints JSON file
 	Hint      string `mapstructure:"hint"`       // Direct hint JSON from CLI
-	
+
 	// Operation type filtering
 	EnableOps  string `mapstructure:"enable_ops"`  // Operation types to enable (e.g., "csfg")
 	DisableOps string `mapstructure:"disable_ops"` // Operation types to disable (e.g., "cud")
-	
+
 	// Claude Code compatibility
 	ClaudeCodeFriendly bool `mapstructure:"claude_code_friendly"` // Remove $ prefix from OData parameters
 }
@@ -94,13 +94,13 @@ func (c *Config) AllowModifyingFunctions() bool {
 func (c *Config) IsOperationEnabled(opType rune) bool {
 	// Normalize operation type to uppercase
 	opType = unicode.ToUpper(opType)
-	
+
 	// Expand 'R' to 'SFG'
 	if opType == 'R' {
 		// Check if any of S, F, or G are enabled
 		return c.IsOperationEnabled('S') || c.IsOperationEnabled('F') || c.IsOperationEnabled('G')
 	}
-	
+
 	// If --enable is specified, only those operations are allowed
 	if c.EnableOps != "" {
 		enableOps := strings.ToUpper(c.EnableOps)
@@ -110,7 +110,7 @@ func (c *Config) IsOperationEnabled(opType rune) bool {
 		}
 		return strings.ContainsRune(enableOps, opType)
 	}
-	
+
 	// If --disable is specified, those operations are not allowed
 	if c.DisableOps != "" {
 		disableOps := strings.ToUpper(c.DisableOps)
@@ -120,7 +120,7 @@ func (c *Config) IsOperationEnabled(opType rune) bool {
 		}
 		return !strings.ContainsRune(disableOps, opType)
 	}
-	
+
 	// If neither flag is specified, all operations are enabled by default
 	return true
 }

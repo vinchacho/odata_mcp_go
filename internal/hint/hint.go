@@ -10,16 +10,16 @@ import (
 
 // ServiceHint represents hints for a specific service pattern
 type ServiceHint struct {
-	Pattern       string                 `json:"pattern"`
-	Priority      int                    `json:"priority,omitempty"`
-	ServiceType   string                 `json:"service_type,omitempty"`
-	KnownIssues   []string               `json:"known_issues,omitempty"`
-	Workarounds   []string               `json:"workarounds,omitempty"`
-	FieldHints    map[string]FieldHint   `json:"field_hints,omitempty"`
-	EntityHints   map[string]EntityHint  `json:"entity_hints,omitempty"`
+	Pattern       string                  `json:"pattern"`
+	Priority      int                     `json:"priority,omitempty"`
+	ServiceType   string                  `json:"service_type,omitempty"`
+	KnownIssues   []string                `json:"known_issues,omitempty"`
+	Workarounds   []string                `json:"workarounds,omitempty"`
+	FieldHints    map[string]FieldHint    `json:"field_hints,omitempty"`
+	EntityHints   map[string]EntityHint   `json:"entity_hints,omitempty"`
 	FunctionHints map[string]FunctionHint `json:"function_hints,omitempty"`
-	Examples      []Example              `json:"examples,omitempty"`
-	Notes         []string               `json:"notes,omitempty"`
+	Examples      []Example               `json:"examples,omitempty"`
+	Notes         []string                `json:"notes,omitempty"`
 }
 
 // FieldHint provides hints for specific fields
@@ -60,9 +60,9 @@ type HintConfig struct {
 
 // Manager manages service hints
 type Manager struct {
-	hints      []ServiceHint
-	cliHint    *ServiceHint // Direct hint from CLI
-	hintsFile  string
+	hints     []ServiceHint
+	cliHint   *ServiceHint // Direct hint from CLI
+	hintsFile string
 }
 
 // NewManager creates a new hint manager
@@ -84,33 +84,33 @@ func (m *Manager) LoadFromFile(path string) error {
 				path = defaultPath
 			}
 		}
-		
+
 		// If still no path, try current directory
 		if path == "" {
 			if _, err := os.Stat("hints.json"); err == nil {
 				path = "hints.json"
 			}
 		}
-		
+
 		// No hints file found is not an error
 		if path == "" {
 			return nil
 		}
 	}
-	
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("failed to read hints file: %w", err)
 	}
-	
+
 	var config HintConfig
 	if err := json.Unmarshal(data, &config); err != nil {
 		return fmt.Errorf("failed to parse hints file: %w", err)
 	}
-	
+
 	m.hints = config.Hints
 	m.hintsFile = path
-	
+
 	return nil
 }
 
@@ -124,35 +124,35 @@ func (m *Manager) SetCLIHint(hintJSON string) error {
 			Notes:   []string{hintJSON},
 		}
 	}
-	
+
 	// CLI hints have highest priority
 	hint.Priority = 1000
 	m.cliHint = &hint
-	
+
 	return nil
 }
 
 // GetHints returns all matching hints for a service URL
 func (m *Manager) GetHints(serviceURL string) map[string]interface{} {
 	var matchingHints []ServiceHint
-	
+
 	// Add CLI hint if present
 	if m.cliHint != nil {
 		matchingHints = append(matchingHints, *m.cliHint)
 	}
-	
+
 	// Find all matching hints
 	for _, hint := range m.hints {
 		if m.matchesPattern(serviceURL, hint.Pattern) {
 			matchingHints = append(matchingHints, hint)
 		}
 	}
-	
+
 	// No hints found
 	if len(matchingHints) == 0 {
 		return nil
 	}
-	
+
 	// Sort by priority (higher first)
 	for i := 0; i < len(matchingHints)-1; i++ {
 		for j := i + 1; j < len(matchingHints); j++ {
@@ -161,33 +161,33 @@ func (m *Manager) GetHints(serviceURL string) map[string]interface{} {
 			}
 		}
 	}
-	
+
 	// Merge hints (higher priority overrides)
 	result := make(map[string]interface{})
-	
+
 	// Start from lowest priority and work up
 	for i := len(matchingHints) - 1; i >= 0; i-- {
 		hint := matchingHints[i]
-		
+
 		if hint.ServiceType != "" {
 			result["service_type"] = hint.ServiceType
 		}
-		
+
 		if len(hint.KnownIssues) > 0 {
 			existing, _ := result["known_issues"].([]string)
 			result["known_issues"] = m.mergeStringSlices(existing, hint.KnownIssues)
 		}
-		
+
 		if len(hint.Workarounds) > 0 {
 			existing, _ := result["workarounds"].([]string)
 			result["workarounds"] = m.mergeStringSlices(existing, hint.Workarounds)
 		}
-		
+
 		if len(hint.Notes) > 0 {
 			existing, _ := result["notes"].([]string)
 			result["notes"] = m.mergeStringSlices(existing, hint.Notes)
 		}
-		
+
 		if len(hint.FieldHints) > 0 {
 			existing, _ := result["field_hints"].(map[string]interface{})
 			if existing == nil {
@@ -198,7 +198,7 @@ func (m *Manager) GetHints(serviceURL string) map[string]interface{} {
 			}
 			result["field_hints"] = existing
 		}
-		
+
 		if len(hint.EntityHints) > 0 {
 			existing, _ := result["entity_hints"].(map[string]interface{})
 			if existing == nil {
@@ -209,7 +209,7 @@ func (m *Manager) GetHints(serviceURL string) map[string]interface{} {
 			}
 			result["entity_hints"] = existing
 		}
-		
+
 		if len(hint.FunctionHints) > 0 {
 			existing, _ := result["function_hints"].(map[string]interface{})
 			if existing == nil {
@@ -220,7 +220,7 @@ func (m *Manager) GetHints(serviceURL string) map[string]interface{} {
 			}
 			result["function_hints"] = existing
 		}
-		
+
 		if len(hint.Examples) > 0 {
 			existing, _ := result["examples"].([]interface{})
 			for _, ex := range hint.Examples {
@@ -229,14 +229,14 @@ func (m *Manager) GetHints(serviceURL string) map[string]interface{} {
 			result["examples"] = existing
 		}
 	}
-	
+
 	// Add hint source info
 	if m.cliHint != nil {
 		result["hint_source"] = "CLI argument"
 	} else if m.hintsFile != "" {
 		result["hint_source"] = fmt.Sprintf("Hints file: %s", m.hintsFile)
 	}
-	
+
 	return result
 }
 
@@ -246,11 +246,11 @@ func (m *Manager) matchesPattern(url, pattern string) bool {
 	if url == pattern {
 		return true
 	}
-	
+
 	// Convert pattern to regex-like matching
 	// * matches any sequence of characters
 	// ? matches a single character
-	
+
 	// Escape special regex characters except * and ?
 	pattern = strings.ReplaceAll(pattern, ".", "\\.")
 	pattern = strings.ReplaceAll(pattern, "+", "\\+")
@@ -263,34 +263,34 @@ func (m *Manager) matchesPattern(url, pattern string) bool {
 	pattern = strings.ReplaceAll(pattern, "{", "\\{")
 	pattern = strings.ReplaceAll(pattern, "}", "\\}")
 	pattern = strings.ReplaceAll(pattern, "|", "\\|")
-	
+
 	// Convert wildcards
 	parts := strings.Split(pattern, "*")
-	
+
 	// Check if URL contains all parts in order
 	currentPos := 0
 	for i, part := range parts {
 		if part == "" {
 			continue
 		}
-		
+
 		// Replace ? with single character match
 		part = strings.ReplaceAll(part, "?", ".")
-		
+
 		// Find part in URL
 		idx := strings.Index(url[currentPos:], part)
 		if idx == -1 {
 			return false
 		}
-		
+
 		// For first part, must match at beginning unless pattern starts with *
 		if i == 0 && pattern[0] != '*' && idx != 0 {
 			return false
 		}
-		
+
 		currentPos += idx + len(part)
 	}
-	
+
 	// For last part, must match at end unless pattern ends with *
 	if len(parts) > 0 && pattern[len(pattern)-1] != '*' {
 		lastPart := parts[len(parts)-1]
@@ -298,7 +298,7 @@ func (m *Manager) matchesPattern(url, pattern string) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -306,21 +306,21 @@ func (m *Manager) matchesPattern(url, pattern string) bool {
 func (m *Manager) mergeStringSlices(existing, new []string) []string {
 	seen := make(map[string]bool)
 	result := make([]string, 0)
-	
+
 	for _, s := range existing {
 		if !seen[s] {
 			seen[s] = true
 			result = append(result, s)
 		}
 	}
-	
+
 	for _, s := range new {
 		if !seen[s] {
 			seen[s] = true
 			result = append(result, s)
 		}
 	}
-	
+
 	return result
 }
 

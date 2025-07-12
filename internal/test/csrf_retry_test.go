@@ -7,10 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/zmcp/odata-mcp/internal/client"
-	"github.com/zmcp/odata-mcp/internal/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zmcp/odata-mcp/internal/client"
+	"github.com/zmcp/odata-mcp/internal/constants"
 )
 
 // TestCSRFTokenRetryMechanism tests the automatic retry on 403 in doRequest
@@ -19,10 +19,10 @@ func TestCSRFTokenRetryMechanism(t *testing.T) {
 	tokenFetchCount := 0
 	postCount := 0
 	validToken := "valid-token-789"
-	
+
 	// Track which token was used for each request
 	tokensUsed := []string{}
-	
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Handle CSRF token fetch
 		if r.Header.Get(constants.CSRFTokenHeader) == constants.CSRFTokenFetch {
@@ -33,13 +33,13 @@ func TestCSRFTokenRetryMechanism(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]interface{}{"d": map[string]interface{}{}})
 			return
 		}
-		
+
 		// For POST requests
 		if r.Method == http.MethodPost {
 			postCount++
 			token := r.Header.Get(constants.CSRFTokenHeader)
 			tokensUsed = append(tokensUsed, token)
-			
+
 			// First request with any token fails with CSRF error
 			// This simulates token expiry
 			if postCount == 1 {
@@ -52,7 +52,7 @@ func TestCSRFTokenRetryMechanism(t *testing.T) {
 				})
 				return
 			}
-			
+
 			// Subsequent requests succeed if they have the valid token
 			if token == validToken {
 				w.WriteHeader(http.StatusCreated)
@@ -63,7 +63,7 @@ func TestCSRFTokenRetryMechanism(t *testing.T) {
 				w.WriteHeader(http.StatusForbidden)
 				json.NewEncoder(w).Encode(map[string]interface{}{
 					"error": map[string]interface{}{
-						"code":    "403", 
+						"code":    "403",
 						"message": "Invalid token",
 					},
 				})
@@ -71,15 +71,15 @@ func TestCSRFTokenRetryMechanism(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	
+
 	client := client.NewODataClient(server.URL, false)
 	client.SetBasicAuth("user", "pass")
-	
+
 	// Make a create request
 	// This should: fetch token -> POST (fail with 403) -> fetch new token -> POST (succeed)
 	_, err := client.CreateEntity(context.Background(), "TestEntities", map[string]interface{}{"Name": "Test"})
 	require.NoError(t, err)
-	
+
 	// Verify the flow
 	assert.Equal(t, 2, tokenFetchCount, "Should fetch token twice (initial + after 403)")
 	assert.Equal(t, 2, postCount, "Should make 2 POST requests (initial fail + retry)")
@@ -111,7 +111,7 @@ func TestCSRFProactiveFetch(t *testing.T) {
 				w.WriteHeader(http.StatusCreated)
 				json.NewEncoder(w).Encode(map[string]interface{}{
 					"d": map[string]interface{}{
-						"ID": "new",
+						"ID":   "new",
 						"Name": "Created",
 					},
 				})
@@ -173,7 +173,7 @@ func TestCSRFTokenExpiry(t *testing.T) {
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error": map[string]interface{}{
-				"code": "403",
+				"code":    "403",
 				"message": "CSRF token expired",
 			},
 		})

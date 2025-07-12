@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/zmcp/odata-mcp/internal/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zmcp/odata-mcp/internal/client"
 )
 
 // TestQueryParameterTranslation tests v2 to v4 query parameter translation
@@ -98,11 +98,11 @@ func TestQueryParameterTranslation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var capturedURL *url.URL
-			
+
 			// Create test server that captures the request URL
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				capturedURL = r.URL
-				
+
 				// Return appropriate metadata based on version
 				if r.URL.Path == "/$metadata" {
 					w.Header().Set("Content-Type", "application/xml")
@@ -131,7 +131,7 @@ func TestQueryParameterTranslation(t *testing.T) {
 					}
 					return
 				}
-				
+
 				// Return empty collection for entity queries
 				w.Header().Set("Content-Type", "application/json")
 				if tt.isV4 {
@@ -148,33 +148,33 @@ func TestQueryParameterTranslation(t *testing.T) {
 				}
 			}))
 			defer server.Close()
-			
+
 			// Create client
 			odataClient := client.NewODataClient(server.URL, false)
 			ctx := context.Background()
-			
+
 			// Fetch metadata to set version
 			_, err := odataClient.GetMetadata(ctx)
 			require.NoError(t, err)
-			
+
 			// Make request with options
 			_, err = odataClient.GetEntitySet(ctx, "TestEntities", tt.inputOptions)
 			require.NoError(t, err)
-			
+
 			// Verify query parameters
 			require.NotNil(t, capturedURL)
 			queryParams := capturedURL.Query()
-			
+
 			// Check expected parameters
 			for param, expectedValue := range tt.expectedQueries {
 				actualValue := queryParams.Get(param)
-				assert.Equal(t, expectedValue, actualValue, 
+				assert.Equal(t, expectedValue, actualValue,
 					"Expected %s=%s but got %s", param, expectedValue, actualValue)
 			}
-			
+
 			// Check parameters that should NOT be present
 			for _, param := range tt.notExpected {
-				assert.Empty(t, queryParams.Get(param), 
+				assert.Empty(t, queryParams.Get(param),
 					"Parameter %s should not be present in URL", param)
 			}
 		})
@@ -190,23 +190,23 @@ func TestCountToolTranslation(t *testing.T) {
 		expectedURL  string
 	}{
 		{
-			name: "V2 count request",
-			isV4: false,
+			name:         "V2 count request",
+			isV4:         false,
 			responseBody: `{"d": {"results": [], "__count": "42"}}`,
-			expectedURL: "TestEntities?%24format=json&%24inlinecount=allpages&%24top=0",
+			expectedURL:  "TestEntities?%24format=json&%24inlinecount=allpages&%24top=0",
 		},
 		{
-			name: "V4 count request",
-			isV4: true,
+			name:         "V4 count request",
+			isV4:         true,
 			responseBody: `{"@odata.context": "http://example.com/$metadata#TestEntities", "@odata.count": 42, "value": []}`,
-			expectedURL: "TestEntities?%24count=true&%24top=0",
+			expectedURL:  "TestEntities?%24count=true&%24top=0",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var capturedPath string
-			
+
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/$metadata" {
 					w.Header().Set("Content-Type", "application/xml")
@@ -235,33 +235,33 @@ func TestCountToolTranslation(t *testing.T) {
 					}
 					return
 				}
-				
+
 				capturedPath = r.URL.Path + "?" + r.URL.RawQuery
 				w.Header().Set("Content-Type", "application/json")
 				w.Write([]byte(tt.responseBody))
 			}))
 			defer server.Close()
-			
+
 			// Create client
 			odataClient := client.NewODataClient(server.URL, false)
 			ctx := context.Background()
-			
+
 			// Fetch metadata
 			_, err := odataClient.GetMetadata(ctx)
 			require.NoError(t, err)
-			
+
 			// Simulate count tool request
 			options := map[string]string{
 				"$inlinecount": "allpages",
 				"$top":         "0",
 			}
-			
+
 			resp, err := odataClient.GetEntitySet(ctx, "TestEntities", options)
 			require.NoError(t, err)
-			
+
 			// Verify URL
 			assert.Contains(t, capturedPath, tt.expectedURL)
-			
+
 			// Verify count was parsed correctly
 			assert.NotNil(t, resp.Count)
 			assert.Equal(t, int64(42), *resp.Count)

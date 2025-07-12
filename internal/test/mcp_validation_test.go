@@ -53,7 +53,7 @@ func TestMCPRequestValidation(t *testing.T) {
 			expectedCode:  -32600, // Invalid request
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Validate request format
@@ -61,28 +61,28 @@ func TestMCPRequestValidation(t *testing.T) {
 				assert.Equal(t, -32700, tc.expectedCode, "Empty request should return parse error")
 				return
 			}
-			
+
 			var req MCPRequest
 			err := json.Unmarshal([]byte(tc.request), &req)
-			
+
 			if err != nil {
 				assert.Equal(t, -32700, tc.expectedCode, "Invalid JSON should return parse error")
 				assert.Contains(t, err.Error(), tc.expectedError)
 				return
 			}
-			
+
 			// Validate JSONRPC version
 			if req.JSONRPC != "2.0" {
 				assert.Equal(t, -32600, tc.expectedCode, "Invalid JSONRPC version should return invalid request")
 				return
 			}
-			
+
 			// Validate method presence
 			if req.Method == "" {
 				assert.Equal(t, -32600, tc.expectedCode, "Missing method should return invalid request")
 				return
 			}
-			
+
 			// Valid request
 			assert.Equal(t, 0, tc.expectedCode, "Valid request should not have error code")
 		})
@@ -118,13 +118,13 @@ func TestMCPResponseFormat(t *testing.T) {
 			hasError: true,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Verify response structure
 			assert.Equal(t, "2.0", tc.response.JSONRPC, "Response must have jsonrpc 2.0")
 			assert.NotNil(t, tc.response.ID, "Response must have ID")
-			
+
 			if tc.hasError {
 				assert.NotNil(t, tc.response.Error, "Error response must have error")
 				assert.Nil(t, tc.response.Result, "Error response cannot have result")
@@ -134,7 +134,7 @@ func TestMCPResponseFormat(t *testing.T) {
 				assert.Nil(t, tc.response.Error, "Success response cannot have error")
 				assert.NotNil(t, tc.response.Result, "Success response must have result")
 			}
-			
+
 			// Verify it can be marshaled
 			data, err := json.Marshal(tc.response)
 			require.NoError(t, err)
@@ -146,14 +146,14 @@ func TestMCPResponseFormat(t *testing.T) {
 // TestMCPErrorCodes tests standard JSON-RPC error codes
 func TestMCPErrorCodes(t *testing.T) {
 	errorCodes := map[string]int{
-		"Parse error":           -32700,
-		"Invalid request":       -32600,
-		"Method not found":      -32601,
-		"Invalid params":        -32602,
-		"Internal error":        -32603,
-		"Server error":          -32000, // to -32099
+		"Parse error":      -32700,
+		"Invalid request":  -32600,
+		"Method not found": -32601,
+		"Invalid params":   -32602,
+		"Internal error":   -32603,
+		"Server error":     -32000, // to -32099
 	}
-	
+
 	for name, code := range errorCodes {
 		t.Run(name, func(t *testing.T) {
 			// Verify error codes are in expected ranges
@@ -209,30 +209,30 @@ func TestMCPToolValidation(t *testing.T) {
 			errorMessage: "type",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Simulate validation
 			if tc.toolName == "create_entity" {
 				entitySet, hasEntitySet := tc.arguments["entitySet"]
 				entity, hasEntity := tc.arguments["entity"]
-				
+
 				if !hasEntitySet || !hasEntity {
 					assert.True(t, tc.expectError, "Should expect error for missing fields")
 					return
 				}
-				
+
 				if _, ok := entitySet.(string); !ok {
 					assert.True(t, tc.expectError, "Should expect error for wrong type")
 					return
 				}
-				
+
 				if _, ok := entity.(map[string]interface{}); !ok {
 					assert.True(t, tc.expectError, "Should expect error for wrong entity type")
 					return
 				}
 			}
-			
+
 			assert.False(t, tc.expectError, "Valid arguments should not produce error")
 		})
 	}

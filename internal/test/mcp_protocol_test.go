@@ -59,26 +59,26 @@ func NewMCPClient(t *testing.T, serviceURL string) (*MCPClient, error) {
 	}
 
 	cmd := exec.Command("../../odata-mcp", serviceURL)
-	
+
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
-	
+
 	client := &MCPClient{
 		cmd:       cmd,
 		stdin:     stdin,
@@ -88,10 +88,10 @@ func NewMCPClient(t *testing.T, serviceURL string) (*MCPClient, error) {
 		responses: make(map[interface{}]chan MCPResponse),
 		t:         t,
 	}
-	
+
 	// Start reading responses
 	go client.readResponses()
-	
+
 	// Start reading stderr for debugging
 	go func() {
 		scanner := bufio.NewScanner(stderr)
@@ -99,10 +99,10 @@ func NewMCPClient(t *testing.T, serviceURL string) (*MCPClient, error) {
 			t.Logf("[SERVER STDERR] %s", scanner.Text())
 		}
 	}()
-	
+
 	// Give server time to start
 	time.Sleep(500 * time.Millisecond)
-	
+
 	return client, nil
 }
 
@@ -110,13 +110,13 @@ func (c *MCPClient) readResponses() {
 	for c.scanner.Scan() {
 		line := c.scanner.Text()
 		c.t.Logf("[SERVER RESPONSE] %s", line)
-		
+
 		var resp MCPResponse
 		if err := json.Unmarshal([]byte(line), &resp); err != nil {
 			c.t.Logf("Failed to parse response: %v", err)
 			continue
 		}
-		
+
 		c.mu.Lock()
 		if ch, ok := c.responses[resp.ID]; ok {
 			ch <- resp
@@ -131,7 +131,7 @@ func (c *MCPClient) SendRequest(method string, params interface{}) (MCPResponse,
 	c.requestID++
 	id := c.requestID
 	c.mu.Unlock()
-	
+
 	var paramsJSON json.RawMessage
 	if params != nil {
 		data, err := json.Marshal(params)
@@ -140,30 +140,30 @@ func (c *MCPClient) SendRequest(method string, params interface{}) (MCPResponse,
 		}
 		paramsJSON = data
 	}
-	
+
 	req := MCPRequest{
 		JSONRPC: "2.0",
 		ID:      id,
 		Method:  method,
 		Params:  paramsJSON,
 	}
-	
+
 	data, err := json.Marshal(req)
 	if err != nil {
 		return MCPResponse{}, err
 	}
-	
+
 	c.t.Logf("[CLIENT REQUEST] %s", string(data))
-	
+
 	respChan := make(chan MCPResponse, 1)
 	c.mu.Lock()
 	c.responses[id] = respChan
 	c.mu.Unlock()
-	
+
 	if _, err := c.stdin.Write(append(data, '\n')); err != nil {
 		return MCPResponse{}, err
 	}
-	
+
 	select {
 	case resp := <-respChan:
 		return resp, nil
@@ -181,20 +181,20 @@ func (c *MCPClient) SendNotification(method string, params interface{}) error {
 		}
 		paramsJSON = data
 	}
-	
+
 	req := MCPRequest{
 		JSONRPC: "2.0",
 		Method:  method,
 		Params:  paramsJSON,
 	}
-	
+
 	data, err := json.Marshal(req)
 	if err != nil {
 		return err
 	}
-	
+
 	c.t.Logf("[CLIENT NOTIFICATION] %s", string(data))
-	
+
 	_, err = c.stdin.Write(append(data, '\n'))
 	return err
 }
@@ -243,26 +243,26 @@ func (suite *MCPProtocolTestSuite) TestInitializeProtocol() {
 			"version": "1.0.0",
 		},
 	}
-	
+
 	resp, err := suite.client.SendRequest("initialize", initParams)
 	require.NoError(suite.T(), err)
 	assert.Nil(suite.T(), resp.Error)
-	
+
 	// Parse result
 	var result map[string]interface{}
 	err = json.Unmarshal(resp.Result, &result)
 	require.NoError(suite.T(), err)
-	
+
 	// Verify server info
 	serverInfo, ok := result["serverInfo"].(map[string]interface{})
 	assert.True(suite.T(), ok)
 	assert.Equal(suite.T(), "odata-mcp-server", serverInfo["name"])
-	
+
 	// Verify capabilities
 	capabilities, ok := result["capabilities"].(map[string]interface{})
 	assert.True(suite.T(), ok)
 	assert.NotNil(suite.T(), capabilities["tools"])
-	
+
 	// Send initialized notification
 	err = suite.client.SendNotification("initialized", nil)
 	assert.NoError(suite.T(), err)
@@ -271,21 +271,21 @@ func (suite *MCPProtocolTestSuite) TestInitializeProtocol() {
 func (suite *MCPProtocolTestSuite) TestListTools() {
 	// Initialize first
 	suite.initializeClient()
-	
+
 	// List tools
 	resp, err := suite.client.SendRequest("tools/list", nil)
 	require.NoError(suite.T(), err)
 	assert.Nil(suite.T(), resp.Error)
-	
+
 	// Parse tools
 	var result map[string]interface{}
 	err = json.Unmarshal(resp.Result, &result)
 	require.NoError(suite.T(), err)
-	
+
 	tools, ok := result["tools"].([]interface{})
 	assert.True(suite.T(), ok)
 	assert.Greater(suite.T(), len(tools), 0)
-	
+
 	// Verify expected tools are present
 	expectedTools := []string{
 		"query_entities",
@@ -296,18 +296,18 @@ func (suite *MCPProtocolTestSuite) TestListTools() {
 		"call_function",
 		"get_metadata",
 	}
-	
+
 	toolNames := make(map[string]bool)
 	for _, tool := range tools {
 		toolMap := tool.(map[string]interface{})
 		name := toolMap["name"].(string)
 		toolNames[name] = true
-		
+
 		// Verify tool structure
 		assert.NotEmpty(suite.T(), toolMap["description"])
 		assert.NotNil(suite.T(), toolMap["inputSchema"])
 	}
-	
+
 	for _, expected := range expectedTools {
 		assert.True(suite.T(), toolNames[expected], "Tool %s should be present", expected)
 	}
@@ -316,7 +316,7 @@ func (suite *MCPProtocolTestSuite) TestListTools() {
 func (suite *MCPProtocolTestSuite) TestCallToolWithCSRF() {
 	// Initialize first
 	suite.initializeClient()
-	
+
 	// Test create_entity tool (which should trigger CSRF token handling)
 	toolParams := map[string]interface{}{
 		"name": "create_entity",
@@ -328,9 +328,9 @@ func (suite *MCPProtocolTestSuite) TestCallToolWithCSRF() {
 			},
 		},
 	}
-	
+
 	resp, err := suite.client.SendRequest("tools/call", toolParams)
-	
+
 	// The actual result depends on whether the service exists
 	// We're mainly testing that the protocol works correctly
 	if err != nil {
@@ -352,11 +352,11 @@ func (suite *MCPProtocolTestSuite) TestCallToolWithCSRF() {
 func (suite *MCPProtocolTestSuite) TestInvalidRequest() {
 	// Initialize first
 	suite.initializeClient()
-	
+
 	// Test invalid method
 	resp, err := suite.client.SendRequest("invalid/method", nil)
 	require.NoError(suite.T(), err)
-	
+
 	assert.NotNil(suite.T(), resp.Error)
 	assert.Equal(suite.T(), -32601, resp.Error.Code) // Method not found
 }
@@ -364,7 +364,7 @@ func (suite *MCPProtocolTestSuite) TestInvalidRequest() {
 func (suite *MCPProtocolTestSuite) TestMissingRequiredParams() {
 	// Initialize first
 	suite.initializeClient()
-	
+
 	// Call tool without required parameters
 	toolParams := map[string]interface{}{
 		"name": "create_entity",
@@ -375,10 +375,10 @@ func (suite *MCPProtocolTestSuite) TestMissingRequiredParams() {
 			},
 		},
 	}
-	
+
 	resp, err := suite.client.SendRequest("tools/call", toolParams)
 	require.NoError(suite.T(), err)
-	
+
 	assert.NotNil(suite.T(), resp.Error)
 	assert.Contains(suite.T(), strings.ToLower(resp.Error.Message), "missing")
 }
@@ -386,30 +386,30 @@ func (suite *MCPProtocolTestSuite) TestMissingRequiredParams() {
 func (suite *MCPProtocolTestSuite) TestConcurrentRequests() {
 	// Initialize first
 	suite.initializeClient()
-	
+
 	// Send multiple requests concurrently
 	var wg sync.WaitGroup
 	errors := make([]error, 5)
-	
+
 	for i := 0; i < 5; i++ {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			
+
 			resp, err := suite.client.SendRequest("tools/list", nil)
 			if err != nil {
 				errors[index] = err
 				return
 			}
-			
+
 			if resp.Error != nil {
 				errors[index] = fmt.Errorf("response error: %v", resp.Error)
 			}
 		}(i)
 	}
-	
+
 	wg.Wait()
-	
+
 	// Check all requests succeeded
 	for i, err := range errors {
 		assert.NoError(suite.T(), err, "Request %d failed", i)
@@ -425,11 +425,11 @@ func (suite *MCPProtocolTestSuite) initializeClient() {
 			"version": "1.0.0",
 		},
 	}
-	
+
 	resp, err := suite.client.SendRequest("initialize", initParams)
 	require.NoError(suite.T(), err)
 	require.Nil(suite.T(), resp.Error)
-	
+
 	err = suite.client.SendNotification("initialized", nil)
 	require.NoError(suite.T(), err)
 }
@@ -441,18 +441,18 @@ func TestMCPProtocolTestSuite(t *testing.T) {
 // MCP Protocol Audit Tests
 func TestMCPProtocolCompliance(t *testing.T) {
 	// These tests verify compliance with MCP specification
-	
+
 	t.Run("JSONRPCVersion", func(t *testing.T) {
 		client, err := NewMCPClient(t, "http://localhost:8080/mock")
 		require.NoError(t, err)
 		defer client.Close()
-		
+
 		// All responses should have jsonrpc: "2.0"
 		resp, err := client.SendRequest("tools/list", nil)
 		require.NoError(t, err)
 		assert.Equal(t, "2.0", resp.JSONRPC)
 	})
-	
+
 	t.Run("ErrorCodes", func(t *testing.T) {
 		// Test standard JSON-RPC error codes
 		testCases := []struct {
@@ -478,7 +478,7 @@ func TestMCPProtocolCompliance(t *testing.T) {
 				expectedCode: -32601,
 			},
 		}
-		
+
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				// Test implementation would go here
@@ -496,7 +496,7 @@ func BenchmarkMCPRequests(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer client.Close()
-	
+
 	// Initialize
 	initParams := map[string]interface{}{
 		"protocolVersion": "2024-11-05",
@@ -506,16 +506,16 @@ func BenchmarkMCPRequests(b *testing.B) {
 			"version": "1.0.0",
 		},
 	}
-	
+
 	_, err = client.SendRequest("initialize", initParams)
 	if err != nil {
 		b.Fatal(err)
 	}
-	
+
 	client.SendNotification("initialized", nil)
-	
+
 	b.ResetTimer()
-	
+
 	b.Run("ToolsList", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, err := client.SendRequest("tools/list", nil)
@@ -524,13 +524,13 @@ func BenchmarkMCPRequests(b *testing.B) {
 			}
 		}
 	})
-	
+
 	b.Run("ToolCall", func(b *testing.B) {
 		params := map[string]interface{}{
-			"name": "get_metadata",
+			"name":      "get_metadata",
 			"arguments": map[string]interface{}{},
 		}
-		
+
 		for i := 0; i < b.N; i++ {
 			_, err := client.SendRequest("tools/call", params)
 			if err != nil {

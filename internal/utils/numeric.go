@@ -32,13 +32,13 @@ var decimalFieldPatterns = []string{
 // IsLikelyDecimalField checks if a field name suggests it should be Edm.Decimal
 func IsLikelyDecimalField(fieldName string) bool {
 	lowerName := strings.ToLower(fieldName)
-	
+
 	for _, pattern := range decimalFieldPatterns {
 		if strings.Contains(lowerName, pattern) {
 			return true
 		}
 	}
-	
+
 	// Also check for fields ending with common numeric suffixes
 	numericSuffixes := []string{"_qty", "_amt", "_val", "_no", "_num", "_count"}
 	for _, suffix := range numericSuffixes {
@@ -46,7 +46,7 @@ func IsLikelyDecimalField(fieldName string) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -89,14 +89,14 @@ func ConvertNumericToString(value interface{}) interface{} {
 // ConvertNumericsInMap converts numeric fields to strings based on field names
 func ConvertNumericsInMap(data map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
-	
+
 	for key, value := range data {
 		// Skip system fields
 		if strings.HasPrefix(key, "$") || strings.HasPrefix(key, "__") {
 			result[key] = value
 			continue
 		}
-		
+
 		// Check if this field should be converted
 		if IsLikelyDecimalField(key) {
 			// Convert numeric value to string
@@ -106,7 +106,7 @@ func ConvertNumericsInMap(data map[string]interface{}) map[string]interface{} {
 			result[key] = ConvertNumericValue(value, false)
 		}
 	}
-	
+
 	return result
 }
 
@@ -116,7 +116,7 @@ func ConvertNumericValue(value interface{}, forceConvert bool) interface{} {
 	case map[string]interface{}:
 		// Recursively convert nested map
 		return ConvertNumericsInMap(v)
-		
+
 	case []interface{}:
 		// Convert each item in array
 		result := make([]interface{}, len(v))
@@ -124,7 +124,7 @@ func ConvertNumericValue(value interface{}, forceConvert bool) interface{} {
 			result[i] = ConvertNumericValue(item, false)
 		}
 		return result
-		
+
 	default:
 		// For scalar values, convert if needed
 		if forceConvert {
@@ -140,7 +140,7 @@ func FormatDecimalString(s string) string {
 	if strings.Contains(s, ".") {
 		return s
 	}
-	
+
 	// For integers, we could add .00 but SAP usually accepts integers as-is
 	return s
 }
@@ -149,12 +149,12 @@ func FormatDecimalString(s string) string {
 func ParseDecimalString(s string) (float64, error) {
 	// Remove any whitespace
 	s = strings.TrimSpace(s)
-	
+
 	// Handle empty string
 	if s == "" {
 		return 0, fmt.Errorf("empty string")
 	}
-	
+
 	// Parse as float
 	return strconv.ParseFloat(s, 64)
 }

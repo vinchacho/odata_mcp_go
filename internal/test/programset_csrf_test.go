@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zmcp/odata-mcp/internal/client"
-	"github.com/zmcp/odata-mcp/internal/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zmcp/odata-mcp/internal/client"
+	"github.com/zmcp/odata-mcp/internal/constants"
 )
 
 // TestPROGRAMSetCreation tests creating ABAP programs through OData with CSRF token handling
@@ -33,12 +33,12 @@ func TestPROGRAMSetCreation(t *testing.T) {
 		csrfToken := "mock-csrf-token-123"
 		tokenRequested := false
 		createRequested := false
-		
+
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Log request for debugging
 			t.Logf("Mock Request: %s %s", r.Method, r.URL.Path)
 			t.Logf("Headers: %+v", r.Header)
-			
+
 			// Handle CSRF token fetch
 			if r.Header.Get(constants.CSRFTokenHeader) == constants.CSRFTokenFetch {
 				tokenRequested = true
@@ -51,7 +51,7 @@ func TestPROGRAMSetCreation(t *testing.T) {
 				})
 				return
 			}
-			
+
 			// Handle metadata
 			if strings.HasSuffix(r.URL.Path, "/$metadata") {
 				w.Header().Set("Content-Type", "application/xml")
@@ -76,17 +76,17 @@ func TestPROGRAMSetCreation(t *testing.T) {
 </edmx:Edmx>`))
 				return
 			}
-			
+
 			// Handle program creation
 			if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "PROGRAMSet") {
 				createRequested = true
-				
+
 				// Check CSRF token
 				if r.Header.Get(constants.CSRFTokenHeader) != csrfToken {
 					w.WriteHeader(http.StatusForbidden)
 					json.NewEncoder(w).Encode(map[string]interface{}{
 						"error": map[string]interface{}{
-							"code":    "403",
+							"code": "403",
 							"message": map[string]interface{}{
 								"lang":  "en",
 								"value": "CSRF token validation failed",
@@ -95,14 +95,14 @@ func TestPROGRAMSetCreation(t *testing.T) {
 					})
 					return
 				}
-				
+
 				// Validate request body
 				var requestData map[string]interface{}
 				if err := json.NewDecoder(r.Body).Decode(&requestData); err != nil {
 					w.WriteHeader(http.StatusBadRequest)
 					return
 				}
-				
+
 				// Simulate successful creation
 				w.WriteHeader(http.StatusCreated)
 				json.NewEncoder(w).Encode(map[string]interface{}{
@@ -110,73 +110,73 @@ func TestPROGRAMSetCreation(t *testing.T) {
 				})
 				return
 			}
-			
+
 			// Default response
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(map[string]interface{}{"d": map[string]interface{}{}})
 		}))
 		defer server.Close()
-		
+
 		// Create client
 		client := client.NewODataClient(server.URL, true)
 		client.SetBasicAuth("testuser", "testpass")
-		
+
 		// Test direct client creation
 		result, err := client.CreateEntity(context.Background(), "PROGRAMSet", testProgram)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		
+
 		// Verify CSRF token was fetched
 		assert.True(t, tokenRequested, "CSRF token should have been requested")
 		assert.True(t, createRequested, "Create request should have been made")
-		
+
 		// Verify response contains created data
 		if data, ok := result.Value.(map[string]interface{}); ok {
 			assert.Equal(t, testProgram["Program"], data["Program"])
 			assert.Equal(t, testProgram["Package"], data["Package"])
 		}
 	})
-	
+
 	t.Run("Integration", func(t *testing.T) {
 		// Skip if environment variables are not set
 		odataURL := os.Getenv("ODATA_URL")
 		odataUser := os.Getenv("ODATA_USER")
 		odataPass := os.Getenv("ODATA_PASS")
-		
+
 		if odataURL == "" || odataUser == "" || odataPass == "" {
 			t.Skip("Skipping integration test: ODATA_URL, ODATA_USER, ODATA_PASS not set")
 		}
-		
+
 		// Create real client
 		client := client.NewODataClient(odataURL, true)
 		client.SetBasicAuth(odataUser, odataPass)
-		
+
 		// Try to create a program
 		// Note: This may fail due to backend validations (e.g., package restrictions)
 		result, err := client.CreateEntity(context.Background(), "PROGRAMSet", testProgram)
-		
+
 		if err != nil {
 			errStr := err.Error()
-			
+
 			// Check for CSRF token issues
 			if strings.Contains(errStr, "403") && strings.Contains(errStr, "CSRF") {
 				t.Fatalf("CSRF token validation failed - this should not happen with the fix: %v", err)
 			}
-			
+
 			// Check for backend validation errors (expected)
 			if strings.Contains(errStr, "package") || strings.Contains(errStr, "$VIBE_") {
 				t.Logf("Expected backend validation error: %v", err)
 				t.Log("The CSRF token handling is working correctly, but the backend rejected the request due to package restrictions")
 				return
 			}
-			
+
 			// Other errors
 			t.Logf("Create operation failed with: %v", err)
 		} else {
 			// Success - verify response
 			t.Log("Program created successfully!")
 			assert.NotNil(t, result)
-			
+
 			if data, ok := result.Value.(map[string]interface{}); ok {
 				t.Logf("Created program: %+v", data)
 			}
@@ -190,7 +190,7 @@ func TestCSRFTokenRetryScenario(t *testing.T) {
 	csrfToken := "sap-csrf-token"
 	tokenFetches := 0
 	createAttempts := 0
-	
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// SAP-style CSRF token fetch
 		if r.Header.Get("X-CSRF-Token") == "Fetch" {
@@ -208,11 +208,11 @@ func TestCSRFTokenRetryScenario(t *testing.T) {
 			})
 			return
 		}
-		
+
 		// Program creation endpoint
 		if r.Method == "POST" && strings.Contains(r.URL.Path, "PROGRAMSet") {
 			createAttempts++
-			
+
 			// First attempt always fails with CSRF error (simulating expired token)
 			if createAttempts == 1 || r.Header.Get("X-CSRF-Token") != csrfToken {
 				w.WriteHeader(http.StatusForbidden)
@@ -232,11 +232,11 @@ func TestCSRFTokenRetryScenario(t *testing.T) {
 				})
 				return
 			}
-			
+
 			// Success on retry with valid token
 			var body map[string]interface{}
 			json.NewDecoder(r.Body).Decode(&body)
-			
+
 			w.WriteHeader(http.StatusCreated)
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"d": map[string]interface{}{
@@ -255,11 +255,11 @@ func TestCSRFTokenRetryScenario(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	
+
 	// Create client with verbose logging
 	client := client.NewODataClient(server.URL, true)
 	client.SetBasicAuth("testuser", "testpass")
-	
+
 	// Attempt to create program - should handle CSRF retry automatically
 	programData := map[string]interface{}{
 		"Package":     "$VIBE_TEST",
@@ -268,15 +268,15 @@ func TestCSRFTokenRetryScenario(t *testing.T) {
 		"SourceCode":  "REPORT zbug_repro.\nWRITE: / 'Bug reproduction'.",
 		"Title":       "Bug Reproduction Program",
 	}
-	
+
 	result, err := client.CreateEntity(context.Background(), "PROGRAMSet", programData)
 	require.NoError(t, err, "Should handle CSRF retry automatically")
 	assert.NotNil(t, result)
-	
+
 	// Verify the retry flow
 	assert.Equal(t, 2, tokenFetches, "Should fetch token twice (initial + after 403)")
 	assert.Equal(t, 2, createAttempts, "Should attempt create twice (initial fail + retry)")
-	
+
 	// Verify created entity
 	if data, ok := result.Value.(map[string]interface{}); ok {
 		assert.Equal(t, "ZBUG_REPRO", data["Program"])

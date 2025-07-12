@@ -8,10 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/zmcp/odata-mcp/internal/client"
-	"github.com/zmcp/odata-mcp/internal/metadata"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zmcp/odata-mcp/internal/client"
+	"github.com/zmcp/odata-mcp/internal/metadata"
 )
 
 // TestODataV4MetadataParsing tests parsing of OData v4 metadata
@@ -54,25 +54,25 @@ func TestODataV4MetadataParsing(t *testing.T) {
 	// Parse metadata
 	meta, err := metadata.ParseMetadata([]byte(v4Metadata), "http://example.com/odata/")
 	require.NoError(t, err)
-	
+
 	// Verify version
 	assert.Equal(t, "4.0", meta.Version)
-	
+
 	// Verify entity types
 	assert.Len(t, meta.EntityTypes, 2)
-	
+
 	productType := meta.EntityTypes["Product"]
 	require.NotNil(t, productType)
 	assert.Equal(t, "Product", productType.Name)
 	assert.Len(t, productType.Properties, 4)
 	assert.Len(t, productType.NavigationProps, 1)
-	
+
 	// Check navigation property has v4 attributes
 	navProp := productType.NavigationProps[0]
 	assert.Equal(t, "Category", navProp.Name)
 	assert.Equal(t, "NorthwindModel.Category", navProp.Type)
 	assert.Equal(t, "Products", navProp.Partner)
-	
+
 	// Verify entity sets
 	assert.Len(t, meta.EntitySets, 2)
 	productSet := meta.EntitySets["Products"]
@@ -89,11 +89,11 @@ func TestODataV4ResponseHandling(t *testing.T) {
 			// Return v4 metadata
 			w.Header().Set("Content-Type", "application/xml")
 			xml.NewEncoder(w).Encode(struct {
-				XMLName xml.Name `xml:"edmx:Edmx"`
-				Version string   `xml:"Version,attr"`
+				XMLName      xml.Name `xml:"edmx:Edmx"`
+				Version      string   `xml:"Version,attr"`
 				DataServices struct {
 					Schema struct {
-						Namespace string `xml:"Namespace,attr"`
+						Namespace       string `xml:"Namespace,attr"`
 						EntityContainer struct {
 							Name string `xml:"Name,attr"`
 						} `xml:"EntityContainer"`
@@ -103,14 +103,14 @@ func TestODataV4ResponseHandling(t *testing.T) {
 				Version: "4.0",
 				DataServices: struct {
 					Schema struct {
-						Namespace string `xml:"Namespace,attr"`
+						Namespace       string `xml:"Namespace,attr"`
 						EntityContainer struct {
 							Name string `xml:"Name,attr"`
 						} `xml:"EntityContainer"`
 					} `xml:"Schema"`
 				}{
 					Schema: struct {
-						Namespace string `xml:"Namespace,attr"`
+						Namespace       string `xml:"Namespace,attr"`
 						EntityContainer struct {
 							Name string `xml:"Name,attr"`
 						} `xml:"EntityContainer"`
@@ -124,7 +124,7 @@ func TestODataV4ResponseHandling(t *testing.T) {
 					},
 				},
 			})
-			
+
 		case "/Products":
 			// Return v4 collection response
 			w.Header().Set("Content-Type", "application/json;odata.metadata=minimal")
@@ -147,7 +147,7 @@ func TestODataV4ResponseHandling(t *testing.T) {
 				},
 				"@odata.nextLink": "http://" + r.Host + "/Products?$skip=2",
 			})
-			
+
 		case "/Products(1)":
 			// Return v4 single entity response
 			w.Header().Set("Content-Type", "application/json;odata.metadata=minimal")
@@ -160,42 +160,42 @@ func TestODataV4ResponseHandling(t *testing.T) {
 				"UnitPrice":      18.00,
 				"Discontinued":   false,
 			})
-			
+
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
 	}))
 	defer server.Close()
-	
+
 	// Create client
 	odataClient := client.NewODataClient(server.URL, false)
 	ctx := context.Background()
-	
+
 	// Fetch metadata to set v4 flag
 	meta, err := odataClient.GetMetadata(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, "4.0", meta.Version)
-	
+
 	// Test collection response
 	resp, err := odataClient.GetEntitySet(ctx, "Products", nil)
 	require.NoError(t, err)
-	
+
 	assert.NotNil(t, resp.Count)
 	assert.Equal(t, int64(2), *resp.Count)
 	assert.Contains(t, resp.Context, "/$metadata#Products")
 	assert.Contains(t, resp.NextLink, "/Products?$skip=2")
-	
+
 	// Verify collection values
 	values, ok := resp.Value.([]interface{})
 	require.True(t, ok)
 	assert.Len(t, values, 2)
-	
+
 	// Test single entity response
 	resp, err = odataClient.GetEntity(ctx, "Products", map[string]interface{}{"ProductID": 1}, nil)
 	require.NoError(t, err)
-	
+
 	assert.Contains(t, resp.Context, "/$metadata#Products/$entity")
-	
+
 	// Verify single entity
 	entity, ok := resp.Value.(map[string]interface{})
 	require.True(t, ok)
@@ -250,11 +250,11 @@ func TestODataV4vsV2Detection(t *testing.T) {
 			isV4:     true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.isV4, metadata.IsODataV4([]byte(tt.metadata)))
-			
+
 			meta, err := metadata.ParseMetadata([]byte(tt.metadata), "http://example.com/")
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, meta.Version)
@@ -289,16 +289,16 @@ func TestODataV4NewTypes(t *testing.T) {
 
 	meta, err := metadata.ParseMetadata([]byte(v4Metadata), "http://example.com/")
 	require.NoError(t, err)
-	
+
 	eventType := meta.EntityTypes["Event"]
 	require.NotNil(t, eventType)
-	
+
 	// Check new v4 types
 	typeMap := make(map[string]string)
 	for _, prop := range eventType.Properties {
 		typeMap[prop.Name] = prop.Type
 	}
-	
+
 	assert.Equal(t, "Edm.Date", typeMap["EventDate"])
 	assert.Equal(t, "Edm.TimeOfDay", typeMap["StartTime"])
 	assert.Equal(t, "Edm.Duration", typeMap["Duration"])

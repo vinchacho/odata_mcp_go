@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zmcp/odata-mcp/internal/client"
-	"github.com/zmcp/odata-mcp/internal/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zmcp/odata-mcp/internal/client"
+	"github.com/zmcp/odata-mcp/internal/constants"
 )
 
 type CSRFTestSuite struct {
@@ -89,7 +89,7 @@ func (suite *CSRFTestSuite) SetupTest() {
 		// Check CSRF token for modifying operations
 		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
 			suite.modifyRequests++
-			
+
 			if suite.csrfRequired && r.Header.Get(constants.CSRFTokenHeader) != suite.csrfToken {
 				w.WriteHeader(http.StatusForbidden)
 				json.NewEncoder(w).Encode(map[string]interface{}{
@@ -120,7 +120,7 @@ func (suite *CSRFTestSuite) SetupTest() {
 			// CREATE operation
 			var body map[string]interface{}
 			json.NewDecoder(r.Body).Decode(&body)
-			
+
 			w.WriteHeader(http.StatusCreated)
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"d": map[string]interface{}{
@@ -134,7 +134,7 @@ func (suite *CSRFTestSuite) SetupTest() {
 			// UPDATE operation
 			var body map[string]interface{}
 			json.NewDecoder(r.Body).Decode(&body)
-			
+
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"d": body,
@@ -186,7 +186,7 @@ func (suite *CSRFTestSuite) TestCSRFTokenFetchOnCreate() {
 	result, err := suite.client.CreateEntity(context.Background(), "TestEntities", entity)
 	require.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), result)
-	
+
 	// Should have fetched token once
 	assert.Equal(suite.T(), 1, suite.tokenRequests, "Should fetch CSRF token once")
 	assert.Equal(suite.T(), 1, suite.modifyRequests, "Should make one create request")
@@ -202,7 +202,7 @@ func (suite *CSRFTestSuite) TestCSRFTokenFetchOnUpdate() {
 	result, err := suite.client.UpdateEntity(context.Background(), "TestEntities", map[string]interface{}{"ID": "1"}, entity, "")
 	require.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), result)
-	
+
 	// Should have fetched token once
 	assert.Equal(suite.T(), 1, suite.tokenRequests, "Should fetch CSRF token once")
 	assert.Equal(suite.T(), 1, suite.modifyRequests, "Should make one update request")
@@ -212,7 +212,7 @@ func (suite *CSRFTestSuite) TestCSRFTokenFetchOnDelete() {
 	// Test that DELETE operation fetches CSRF token (Python-style: fresh token per operation)
 	_, err := suite.client.DeleteEntity(context.Background(), "TestEntities", map[string]interface{}{"ID": "1"})
 	require.NoError(suite.T(), err)
-	
+
 	// Should have fetched token once
 	assert.Equal(suite.T(), 1, suite.tokenRequests, "Should fetch CSRF token once")
 	assert.Equal(suite.T(), 1, suite.modifyRequests, "Should make one delete request")
@@ -220,7 +220,7 @@ func (suite *CSRFTestSuite) TestCSRFTokenFetchOnDelete() {
 
 func (suite *CSRFTestSuite) TestCSRFTokenFreshFetchForEachOperation() {
 	// Test that CSRF token is fetched fresh for each modifying operation (Python behavior)
-	
+
 	// First operation - should fetch token
 	entity1 := map[string]interface{}{
 		"Name":  "Entity 1",
@@ -228,7 +228,7 @@ func (suite *CSRFTestSuite) TestCSRFTokenFreshFetchForEachOperation() {
 	}
 	_, err := suite.client.CreateEntity(context.Background(), "TestEntities", entity1)
 	require.NoError(suite.T(), err)
-	
+
 	// Second operation - should fetch new token (Python behavior)
 	entity2 := map[string]interface{}{
 		"Name":  "Entity 2",
@@ -236,11 +236,11 @@ func (suite *CSRFTestSuite) TestCSRFTokenFreshFetchForEachOperation() {
 	}
 	_, err = suite.client.CreateEntity(context.Background(), "TestEntities", entity2)
 	require.NoError(suite.T(), err)
-	
+
 	// Third operation - should fetch another new token
 	_, err = suite.client.DeleteEntity(context.Background(), "TestEntities", map[string]interface{}{"ID": "1"})
 	require.NoError(suite.T(), err)
-	
+
 	// Should have fetched token for each operation (Python behavior)
 	assert.Equal(suite.T(), 3, suite.tokenRequests, "Should fetch CSRF token for each operation")
 	assert.Equal(suite.T(), 3, suite.modifyRequests, "Should make three modify requests")
@@ -251,7 +251,7 @@ func (suite *CSRFTestSuite) TestCSRFTokenNotRequiredForRead() {
 	result, err := suite.client.GetEntitySet(context.Background(), "TestEntities", nil)
 	require.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), result)
-	
+
 	// Should not fetch token for read operations
 	assert.Equal(suite.T(), 0, suite.tokenRequests, "Should not fetch CSRF token for read")
 	assert.Equal(suite.T(), 0, suite.modifyRequests, "Should not be a modify request")
@@ -260,11 +260,11 @@ func (suite *CSRFTestSuite) TestCSRFTokenNotRequiredForRead() {
 func (suite *CSRFTestSuite) TestCSRFTokenRetryOn403() {
 	// Test the automatic retry mechanism when CSRF token validation fails
 	// This simulates a scenario where the token is invalid or expired
-	
+
 	fetchCount := 0
 	postCount := 0
 	validToken := "valid-token-456"
-	
+
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Handle token fetch
 		if r.Header.Get(constants.CSRFTokenHeader) == constants.CSRFTokenFetch {
@@ -279,12 +279,12 @@ func (suite *CSRFTestSuite) TestCSRFTokenRetryOn403() {
 			json.NewEncoder(w).Encode(map[string]interface{}{"d": map[string]interface{}{}})
 			return
 		}
-		
+
 		// For POST requests
 		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "TestEntities") {
 			postCount++
 			token := r.Header.Get(constants.CSRFTokenHeader)
-			
+
 			// Only accept the valid token
 			if token == validToken {
 				w.WriteHeader(http.StatusCreated)
@@ -307,27 +307,27 @@ func (suite *CSRFTestSuite) TestCSRFTokenRetryOn403() {
 			}
 			return
 		}
-		
+
 		// Default response
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{"d": map[string]interface{}{}})
 	}))
 	defer testServer.Close()
-	
+
 	client := client.NewODataClient(testServer.URL, false)
 	client.SetBasicAuth("testuser", "testpass")
-	
+
 	// Make a create request
 	// This should trigger: fetch token (invalid) -> POST -> 403 -> fetch new token -> retry -> success
 	entity := map[string]interface{}{
 		"Name":  "Test Entity",
 		"Value": 500,
 	}
-	
+
 	result, err := client.CreateEntity(context.Background(), "TestEntities", entity)
 	require.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), result)
-	
+
 	// Verify the retry mechanism worked
 	assert.Equal(suite.T(), 2, fetchCount, "Should fetch token twice (initial + retry)")
 	assert.Equal(suite.T(), 2, postCount, "Should make two POST requests (initial + retry)")
@@ -338,11 +338,11 @@ func (suite *CSRFTestSuite) TestCSRFTokenFunctionCall() {
 	params := map[string]interface{}{
 		"param1": "value1",
 	}
-	
+
 	result, err := suite.client.CallFunction(context.Background(), "TestFunction", params, "POST")
 	require.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), result)
-	
+
 	// Should have fetched token once
 	assert.Equal(suite.T(), 1, suite.tokenRequests, "Should fetch CSRF token once")
 	assert.Equal(suite.T(), 1, suite.modifyRequests, "Should make one function call")
@@ -358,13 +358,13 @@ func (suite *CSRFTestSuite) TestCSRFTokenHeaderVariations() {
 		{"Lowercase", "x-csrf-token"},
 		{"Mixed case", "X-Csrf-Token"},
 	}
-	
+
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
 			// Reset counters
 			suite.tokenRequests = 0
 			suite.modifyRequests = 0
-			
+
 			// Create new server that returns token with different case
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get(constants.CSRFTokenHeader) == constants.CSRFTokenFetch {
@@ -373,22 +373,22 @@ func (suite *CSRFTestSuite) TestCSRFTokenHeaderVariations() {
 					json.NewEncoder(w).Encode(map[string]interface{}{"d": map[string]interface{}{}})
 					return
 				}
-				
+
 				// For modify operations, accept the token
 				if r.Method == http.MethodPost && r.Header.Get(constants.CSRFTokenHeader) == suite.csrfToken {
 					w.WriteHeader(http.StatusCreated)
 					json.NewEncoder(w).Encode(map[string]interface{}{"d": map[string]interface{}{"ID": "1"}})
 					return
 				}
-				
+
 				w.WriteHeader(http.StatusForbidden)
 			}))
 			defer server.Close()
-			
+
 			// Create client with new server
 			client := client.NewODataClient(server.URL, false)
 			client.SetBasicAuth("user", "pass")
-			
+
 			// Make a create request
 			_, err := client.CreateEntity(context.Background(), "TestEntities", map[string]interface{}{"Name": "Test"})
 			assert.NoError(suite.T(), err, "Should handle %s header", tc.headerName)
@@ -406,17 +406,17 @@ func TestCSRFIntegration(t *testing.T) {
 	odataURL := os.Getenv("ODATA_URL")
 	odataUser := os.Getenv("ODATA_USER")
 	odataPass := os.Getenv("ODATA_PASS")
-	
+
 	if odataURL == "" || odataUser == "" || odataPass == "" {
 		t.Skip("Skipping integration test: ODATA_URL, ODATA_USER, ODATA_PASS not set")
 	}
-	
+
 	t.Log("Running CSRF integration test against:", odataURL)
-	
+
 	// Create real client
 	client := client.NewODataClient(odataURL, true)
 	client.SetBasicAuth(odataUser, odataPass)
-	
+
 	// Test 1: Get metadata to understand available entity sets
 	t.Run("GetMetadata", func(t *testing.T) {
 		metadata, err := client.GetMetadata(context.Background())
@@ -427,7 +427,7 @@ func TestCSRFIntegration(t *testing.T) {
 		assert.NotEmpty(t, metadata)
 		t.Logf("Metadata retrieved successfully")
 	})
-	
+
 	// Test 2: Test read operation (no CSRF required)
 	t.Run("ReadOperation", func(t *testing.T) {
 		// Try to get root entity sets
@@ -445,7 +445,7 @@ func TestCSRFIntegration(t *testing.T) {
 			t.Log("Read operation successful - no CSRF token required")
 		}
 	})
-	
+
 	// Test 3: Test modify operation (CSRF required)
 	t.Run("ModifyOperationCSRF", func(t *testing.T) {
 		// Note: This test attempts a create operation which may fail
@@ -453,10 +453,10 @@ func TestCSRFIntegration(t *testing.T) {
 		testEntity := map[string]interface{}{
 			"TestField": fmt.Sprintf("CSRFTest_%d", time.Now().Unix()),
 		}
-		
+
 		// Attempt to create - this should trigger CSRF token fetch
 		result, err := client.CreateEntity(context.Background(), "TestEntities", testEntity)
-		
+
 		if err != nil {
 			// Check if error is due to CSRF or other issues
 			errStr := err.Error()
@@ -470,7 +470,7 @@ func TestCSRFIntegration(t *testing.T) {
 		} else {
 			t.Log("Create operation successful with CSRF token")
 			assert.NotNil(t, result)
-			
+
 			// If create succeeded, try to clean up
 			if result.Value != nil {
 				if data, ok := result.Value.(map[string]interface{}); ok {

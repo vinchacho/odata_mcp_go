@@ -26,7 +26,7 @@ func NewTraceLogger(enabled bool) (*TraceLogger, error) {
 	// Create trace file with timestamp
 	timestamp := time.Now().Format("20060102_150405")
 	filename := filepath.Join(os.TempDir(), fmt.Sprintf("mcp_trace_%s.log", timestamp))
-	
+
 	file, err := os.Create(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create trace file: %w", err)

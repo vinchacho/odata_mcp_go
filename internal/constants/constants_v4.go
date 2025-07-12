@@ -8,30 +8,30 @@ const (
 
 // OData v4 specific type mappings
 var ODataTypeMapV4 = map[string]string{
-	"Edm.String":           "string",
-	"Edm.Int16":            "int16",
-	"Edm.Int32":            "int32",
-	"Edm.Int64":            "int64",
-	"Edm.Boolean":          "bool",
-	"Edm.Byte":             "byte",
-	"Edm.SByte":            "int8",
-	"Edm.Single":           "float32",
-	"Edm.Double":           "float64",
-	"Edm.Decimal":          "string", // Use string for precision
-	"Edm.Date":             "string", // ISO 8601 date string (new in v4)
-	"Edm.TimeOfDay":        "string", // ISO 8601 time string (new in v4)
-	"Edm.DateTimeOffset":   "string", // ISO 8601 string with timezone
-	"Edm.Duration":         "string", // ISO 8601 duration (replaces Edm.Time)
-	"Edm.Guid":             "string", // UUID string
-	"Edm.Binary":           "string", // Base64 encoded string
-	"Edm.Stream":           "string", // Stream reference (new in v4)
+	"Edm.String":         "string",
+	"Edm.Int16":          "int16",
+	"Edm.Int32":          "int32",
+	"Edm.Int64":          "int64",
+	"Edm.Boolean":        "bool",
+	"Edm.Byte":           "byte",
+	"Edm.SByte":          "int8",
+	"Edm.Single":         "float32",
+	"Edm.Double":         "float64",
+	"Edm.Decimal":        "string", // Use string for precision
+	"Edm.Date":           "string", // ISO 8601 date string (new in v4)
+	"Edm.TimeOfDay":      "string", // ISO 8601 time string (new in v4)
+	"Edm.DateTimeOffset": "string", // ISO 8601 string with timezone
+	"Edm.Duration":       "string", // ISO 8601 duration (replaces Edm.Time)
+	"Edm.Guid":           "string", // UUID string
+	"Edm.Binary":         "string", // Base64 encoded string
+	"Edm.Stream":         "string", // Stream reference (new in v4)
 }
 
 // OData v4 content types
 const (
-	ContentTypeODataJSONV4         = "application/json;odata.metadata=minimal"
-	ContentTypeODataJSONFullV4     = "application/json;odata.metadata=full"
-	ContentTypeODataJSONNoneV4     = "application/json;odata.metadata=none"
+	ContentTypeODataJSONV4          = "application/json;odata.metadata=minimal"
+	ContentTypeODataJSONFullV4      = "application/json;odata.metadata=full"
+	ContentTypeODataJSONNoneV4      = "application/json;odata.metadata=none"
 	ContentTypeODataJSONStreamingV4 = "application/json;odata.streaming=true"
 )
 
@@ -44,13 +44,13 @@ const (
 
 // OData v4 annotations
 const (
-	ODataContext    = "@odata.context"
-	ODataType       = "@odata.type"
-	ODataID         = "@odata.id"
-	ODataEditLink   = "@odata.editLink"
-	ODataCount      = "@odata.count"
-	ODataNextLink   = "@odata.nextLink"
-	ODataDeltaLink  = "@odata.deltaLink"
+	ODataContext   = "@odata.context"
+	ODataType      = "@odata.type"
+	ODataID        = "@odata.id"
+	ODataEditLink  = "@odata.editLink"
+	ODataCount     = "@odata.count"
+	ODataNextLink  = "@odata.nextLink"
+	ODataDeltaLink = "@odata.deltaLink"
 )
 
 // IsODataV4Namespace checks if the namespace is OData v4

@@ -81,40 +81,40 @@ func init() {
 	rootCmd.Flags().BoolVar(&cfg.Debug, "debug", false, "Alias for --verbose")
 	rootCmd.Flags().BoolVar(&cfg.SortTools, "sort-tools", true, "Sort tools alphabetically in the output")
 	rootCmd.Flags().BoolVar(&cfg.Trace, "trace", false, "Initialize MCP service and print all tools and parameters, then exit (useful for debugging)")
-	
+
 	// Response enhancement options
 	rootCmd.Flags().BoolVar(&cfg.PaginationHints, "pagination-hints", false, "Add pagination support with suggested_next_call and has_more indicators")
 	rootCmd.Flags().BoolVar(&cfg.LegacyDates, "legacy-dates", true, "Support epoch timestamp format (/Date(1234567890000)/) - enabled by default for SAP")
 	rootCmd.Flags().BoolVar(&cfg.NoLegacyDates, "no-legacy-dates", false, "Disable legacy date format conversion")
 	rootCmd.Flags().BoolVar(&cfg.VerboseErrors, "verbose-errors", false, "Provide detailed error context and debugging information")
 	rootCmd.Flags().BoolVar(&cfg.ResponseMetadata, "response-metadata", false, "Include detailed __metadata blocks in entity responses")
-	
+
 	// Response size limits
 	rootCmd.Flags().IntVar(&cfg.MaxResponseSize, "max-response-size", 5*1024*1024, "Maximum response size in bytes (default: 5MB)")
 	rootCmd.Flags().IntVar(&cfg.MaxItems, "max-items", 100, "Maximum number of items in response (default: 100)")
-	
+
 	// Read-only mode flags
 	rootCmd.Flags().BoolVar(&cfg.ReadOnly, "read-only", false, "Read-only mode: hide all modifying operations (create, update, delete, and functions)")
 	rootCmd.Flags().BoolVar(&cfg.ReadOnly, "ro", false, "Read-only mode (shorthand for --read-only)")
 	rootCmd.Flags().BoolVar(&cfg.ReadOnlyButFunctions, "read-only-but-functions", false, "Read-only mode but allow function imports")
 	rootCmd.Flags().BoolVar(&cfg.ReadOnlyButFunctions, "robf", false, "Read-only but functions (shorthand for --read-only-but-functions)")
-	
+
 	// Transport options
 	rootCmd.Flags().String("transport", "stdio", "Transport type: 'stdio' or 'http' (SSE)")
 	rootCmd.Flags().String("http-addr", "localhost:8080", "HTTP server address (used with --transport http, defaults to localhost only for security)")
 	rootCmd.Flags().Bool("i-am-security-expert-i-know-what-i-am-doing", false, "DANGEROUS: Allow non-localhost HTTP transport. MCP has no authentication!")
-	
+
 	// Debug options
 	rootCmd.Flags().Bool("trace-mcp", false, "Enable trace logging to debug MCP communication")
-	
+
 	// Hint options
 	rootCmd.Flags().StringVar(&cfg.HintsFile, "hints-file", "", "Path to hints JSON file (defaults to hints.json in same directory as binary)")
 	rootCmd.Flags().StringVar(&cfg.Hint, "hint", "", "Direct hint JSON or text to inject into service info")
-	
+
 	// Operation type filtering
 	rootCmd.Flags().StringVar(&cfg.EnableOps, "enable", "", "Enable only specified operation types (C=create, S=search, F=filter, G=get, U=update, D=delete, A=action, R=read expands to SFG)")
 	rootCmd.Flags().StringVar(&cfg.DisableOps, "disable", "", "Disable specified operation types (C=create, S=search, F=filter, G=get, U=update, D=delete, A=action, R=read expands to SFG)")
-	
+
 	// Claude Code compatibility
 	rootCmd.Flags().BoolVarP(&cfg.ClaudeCodeFriendly, "claude-code-friendly", "c", false, "Remove $ prefix from OData parameters for Claude Code CLI compatibility")
 
@@ -135,7 +135,7 @@ func runBridge(cmd *cobra.Command, args []string) error {
 	if cfg.Debug {
 		cfg.Verbose = true
 	}
-	
+
 	// Handle legacy dates flags
 	if cfg.NoLegacyDates {
 		cfg.LegacyDates = false
@@ -149,24 +149,24 @@ func runBridge(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "[VERBOSE] Legacy date format enabled by default for SAP compatibility. Use --no-legacy-dates to disable.\n")
 		}
 	}
-	
+
 	// Handle read-only mode flags
 	if cfg.ReadOnly && cfg.ReadOnlyButFunctions {
 		return fmt.Errorf("cannot use both --read-only and --read-only-but-functions flags at the same time")
 	}
-	
+
 	// Handle operation type filtering flags
 	if cfg.EnableOps != "" && cfg.DisableOps != "" {
 		return fmt.Errorf("cannot use both --enable and --disable flags at the same time")
 	}
-	
+
 	if cfg.EnableOps != "" && cfg.Verbose {
 		fmt.Fprintf(os.Stderr, "[VERBOSE] Operation filtering enabled. Only these operations will be available: %s\n", strings.ToUpper(cfg.EnableOps))
 	}
 	if cfg.DisableOps != "" && cfg.Verbose {
 		fmt.Fprintf(os.Stderr, "[VERBOSE] Operation filtering enabled. These operations will be disabled: %s\n", strings.ToUpper(cfg.DisableOps))
 	}
-	
+
 	if cfg.IsReadOnly() {
 		if cfg.Verbose {
 			if cfg.ReadOnly {
@@ -233,16 +233,16 @@ func runBridge(cmd *cobra.Command, args []string) error {
 	if cfg.Trace {
 		return printTraceInfo(odataBridge)
 	}
-	
+
 	// Set up transport based on flag
 	transportType, _ := cmd.Flags().GetString("transport")
-	
+
 	// Get the MCP server from the bridge
 	mcpServer := odataBridge.GetServer()
 	if mcpServer == nil {
 		return fmt.Errorf("failed to get MCP server from bridge")
 	}
-	
+
 	// Set up tracing if requested
 	enableTrace, _ := cmd.Flags().GetBool("trace-mcp")
 	var tracer *debug.TraceLogger
@@ -255,18 +255,18 @@ func runBridge(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "[TRACE] Trace logging enabled. Output file: %s\n", tracer.GetFilename())
 		}
 	}
-	
+
 	// Create handler function that delegates to the MCP server
 	handler := func(ctx context.Context, msg *transport.Message) (*transport.Message, error) {
 		return mcpServer.HandleMessage(ctx, msg)
 	}
-	
+
 	var trans transport.Transport
 	switch transportType {
 	case "http", "sse":
 		httpAddr, _ := cmd.Flags().GetString("http-addr")
 		expertMode, _ := cmd.Flags().GetBool("i-am-security-expert-i-know-what-i-am-doing")
-		
+
 		// Security check: ensure localhost-only unless expert mode
 		if !expertMode && !isLocalhostAddr(httpAddr) {
 			fmt.Fprintf(os.Stderr, "\n⚠️  SECURITY WARNING ⚠️\n")
@@ -281,7 +281,7 @@ func runBridge(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "  --i-am-security-expert-i-know-what-i-am-doing\n\n")
 			return fmt.Errorf("refusing to start unprotected HTTP transport on non-localhost address")
 		}
-		
+
 		if expertMode && !isLocalhostAddr(httpAddr) {
 			fmt.Fprintf(os.Stderr, "\n🚨 EXTREME SECURITY WARNING 🚨\n")
 			fmt.Fprintf(os.Stderr, "You are exposing an UNPROTECTED MCP service to the network!\n")
@@ -290,7 +290,7 @@ func runBridge(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "Address: %s\n\n", httpAddr)
 			fmt.Fprintf(os.Stderr, "Press Ctrl+C NOW if this is not intentional!\n\n")
 		}
-		
+
 		if cfg.Verbose {
 			fmt.Fprintf(os.Stderr, "[VERBOSE] Starting HTTP/SSE transport on %s\n", httpAddr)
 		}
@@ -307,7 +307,7 @@ func runBridge(cmd *cobra.Command, args []string) error {
 		}
 		trans = stdioTrans
 	}
-	
+
 	// Set transport on the MCP server
 	mcpServer.SetTransport(trans)
 
@@ -334,7 +334,7 @@ func isLocalhostAddr(addr string) bool {
 	if strings.HasPrefix(addr, ":") {
 		return false
 	}
-	
+
 	// Extract host part (before the colon)
 	host := addr
 	if idx := strings.LastIndex(addr, ":"); idx != -1 {
@@ -342,11 +342,11 @@ func isLocalhostAddr(addr string) bool {
 		// Handle IPv6 addresses like [::1]:8080
 		host = strings.Trim(host, "[]")
 	}
-	
+
 	// Check for localhost variants
-	return host == "localhost" || 
-		host == "127.0.0.1" || 
-		host == "::1" || 
+	return host == "localhost" ||
+		host == "127.0.0.1" ||
+		host == "::1" ||
 		host == "" // empty host defaults to localhost
 }
 

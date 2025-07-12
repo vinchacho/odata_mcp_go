@@ -49,17 +49,17 @@ func NewODataMCPBridge(cfg *config.Config) (*ODataMCPBridge, error) {
 
 	// Create MCP server
 	mcpServer := mcp.NewServer(constants.MCPServerName, constants.MCPServerVersion)
-	
+
 	// Create hint manager
 	hintMgr := hint.NewManager()
-	
+
 	// Load hints from file if specified or default location
 	if err := hintMgr.LoadFromFile(cfg.HintsFile); err != nil {
 		if cfg.Verbose {
 			fmt.Fprintf(os.Stderr, "[VERBOSE] Failed to load hints file: %v\n", err)
 		}
 	}
-	
+
 	// Set CLI hint if provided
 	if cfg.Hint != "" {
 		if err := hintMgr.SetCLIHint(cfg.Hint); err != nil {
@@ -119,7 +119,7 @@ func (b *ODataMCPBridge) generateTools() error {
 		}
 	}
 	sort.Strings(entityNames)
-	
+
 	for _, name := range entityNames {
 		entitySet := b.metadata.EntitySets[name]
 		b.generateEntitySetTools(name, entitySet)
@@ -133,10 +133,10 @@ func (b *ODataMCPBridge) generateTools() error {
 		}
 	}
 	sort.Strings(functionNames)
-	
+
 	for _, name := range functionNames {
 		function := b.metadata.FunctionImports[name]
-		
+
 		// Check if actions are enabled
 		if !b.config.IsOperationEnabled('A') {
 			if b.config.Verbose {
@@ -144,7 +144,7 @@ func (b *ODataMCPBridge) generateTools() error {
 			}
 			continue
 		}
-		
+
 		// Skip modifying functions in read-only mode unless functions are allowed
 		if b.config.ReadOnly || (!b.config.AllowModifyingFunctions() && b.isFunctionModifying(function)) {
 			if b.config.Verbose {
@@ -216,16 +216,16 @@ func (b *ODataMCPBridge) isFunctionModifying(function *models.FunctionImport) bo
 	if httpMethod == "GET" {
 		return false
 	}
-	
+
 	// For v4, actions are typically modifying, functions are typically read-only
 	if function.IsAction {
 		return true
 	}
-	
+
 	// If HTTP method is POST, PUT, PATCH, DELETE, or MERGE, it's modifying
-	return httpMethod == "POST" || httpMethod == "PUT" || 
-		   httpMethod == "PATCH" || httpMethod == "DELETE" || 
-		   httpMethod == "MERGE"
+	return httpMethod == "POST" || httpMethod == "PUT" ||
+		httpMethod == "PATCH" || httpMethod == "DELETE" ||
+		httpMethod == "MERGE"
 }
 
 // getParameterName returns the parameter name based on ClaudeCodeFriendly setting
@@ -369,7 +369,7 @@ func (b *ODataMCPBridge) generateFilterTool(entitySetName string, entitySet *mod
 			"description": "OData filter expression",
 		},
 		b.getParameterName("$select"): map[string]interface{}{
-			"type":        "string", 
+			"type":        "string",
 			"description": "Comma-separated list of properties to select",
 		},
 		b.getParameterName("$expand"): map[string]interface{}{
@@ -385,7 +385,7 @@ func (b *ODataMCPBridge) generateFilterTool(entitySetName string, entitySet *mod
 			"description": "Maximum number of entities to return",
 		},
 		b.getParameterName("$skip"): map[string]interface{}{
-			"type":        "integer", 
+			"type":        "integer",
 			"description": "Number of entities to skip",
 		},
 		b.getParameterName("$count"): map[string]interface{}{
@@ -529,7 +529,7 @@ func (b *ODataMCPBridge) generateGetTool(entitySetName string, entitySet *models
 		"description": "Comma-separated list of properties to select",
 	}
 	properties[b.getParameterName("$expand")] = map[string]interface{}{
-		"type":        "string", 
+		"type":        "string",
 		"description": "Navigation properties to expand",
 	}
 
@@ -540,7 +540,7 @@ func (b *ODataMCPBridge) generateGetTool(entitySetName string, entitySet *models
 	if len(required) > 0 {
 		inputSchema["required"] = required
 	}
-	
+
 	tool := &mcp.Tool{
 		Name:        toolName,
 		Description: description,
@@ -897,14 +897,14 @@ func (b *ODataMCPBridge) GetTraceInfo() (*models.TraceInfo, error) {
 	if !b.config.UsePostfix() {
 		toolNaming = "Prefix"
 	}
-	
+
 	readOnlyMode := ""
 	if b.config.ReadOnly {
 		readOnlyMode = "Full read-only (no modifying operations)"
 	} else if b.config.ReadOnlyButFunctions {
 		readOnlyMode = "Read-only except functions"
 	}
-	
+
 	operationFilter := ""
 	if b.config.EnableOps != "" {
 		operationFilter = fmt.Sprintf("Enabled: %s", strings.ToUpper(b.config.EnableOps))
@@ -915,7 +915,7 @@ func (b *ODataMCPBridge) GetTraceInfo() (*models.TraceInfo, error) {
 	// Get the actual tools from the MCP server to include full schema info
 	mcpTools := b.server.GetTools()
 	tools := make([]models.ToolInfo, 0, len(mcpTools))
-	
+
 	for _, mcpTool := range mcpTools {
 		// Find the corresponding tool info
 		var toolInfo *models.ToolInfo
@@ -925,7 +925,7 @@ func (b *ODataMCPBridge) GetTraceInfo() (*models.TraceInfo, error) {
 				break
 			}
 		}
-		
+
 		if toolInfo != nil {
 			// Create a copy with properties from the MCP tool
 			info := *toolInfo
@@ -968,14 +968,14 @@ func (b *ODataMCPBridge) handleServiceInfo(ctx context.Context, args map[string]
 	}
 
 	info := map[string]interface{}{
-		"service_url": b.config.ServiceURL,
-		"entity_sets": len(b.metadata.EntitySets),
-		"entity_types": len(b.metadata.EntityTypes),
+		"service_url":      b.config.ServiceURL,
+		"entity_sets":      len(b.metadata.EntitySets),
+		"entity_types":     len(b.metadata.EntityTypes),
 		"function_imports": len(b.metadata.FunctionImports),
 		"schema_namespace": b.metadata.SchemaNamespace,
-		"container_name": b.metadata.ContainerName,
-		"version": b.metadata.Version,
-		"parsed_at": b.metadata.ParsedAt.Format("2006-01-02T15:04:05Z"),
+		"container_name":   b.metadata.ContainerName,
+		"version":          b.metadata.Version,
+		"parsed_at":        b.metadata.ParsedAt.Format("2006-01-02T15:04:05Z"),
 	}
 
 	// Add service-specific hints from hint manager
@@ -1001,14 +1001,14 @@ func (b *ODataMCPBridge) handleServiceInfo(ctx context.Context, args map[string]
 func (b *ODataMCPBridge) handleEntityFilter(ctx context.Context, entitySetName string, args map[string]interface{}) (interface{}, error) {
 	// Build query options from arguments using standard OData parameters
 	options := make(map[string]string)
-	
+
 	// Map arguments to handle both Claude-friendly and standard parameter names
 	mappedArgs := make(map[string]interface{})
 	for key, value := range args {
 		mappedKey := b.mapParameterToOData(key)
 		mappedArgs[mappedKey] = value
 	}
-	
+
 	// Handle each OData parameter
 	if filter, ok := mappedArgs["$filter"].(string); ok && filter != "" {
 		options[constants.QueryFilter] = filter
@@ -1028,13 +1028,13 @@ func (b *ODataMCPBridge) handleEntityFilter(ctx context.Context, entitySetName s
 	if skip, ok := mappedArgs["$skip"].(float64); ok {
 		options[constants.QuerySkip] = fmt.Sprintf("%d", int(skip))
 	}
-	
+
 	// Handle $count parameter - translate to appropriate version-specific parameter
 	if count, ok := mappedArgs["$count"].(bool); ok && count {
 		// The client will automatically translate this to $count=true for v4
 		options[constants.QueryInlineCount] = "allpages"
 	}
-	
+
 	// Call OData client to get entity set
 	response, err := b.client.GetEntitySet(ctx, entitySetName, options)
 	if err != nil {
@@ -1043,16 +1043,16 @@ func (b *ODataMCPBridge) handleEntityFilter(ctx context.Context, entitySetName s
 		}
 		return nil, fmt.Errorf("failed to filter entities: %w", err)
 	}
-	
+
 	// Enhance response based on configuration
 	enhancedResponse := b.enhanceResponse(response, options)
-	
+
 	// Format response as JSON string
 	result, err := json.Marshal(enhancedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("failed to format response: %w", err)
 	}
-	
+
 	return string(result), nil
 }
 
@@ -1066,26 +1066,26 @@ func (b *ODataMCPBridge) enhanceResponse(response *models.ODataResponse, options
 		Error:    response.Error,
 		Metadata: response.Metadata,
 	}
-	
+
 	// Apply size limits first to prevent large responses
 	enhanced = b.applySizeLimits(enhanced)
-	
+
 	// Add pagination hints if enabled
 	if b.config.PaginationHints && response.Value != nil {
 		pagination := &models.PaginationInfo{}
-		
+
 		// Set total count if available
 		if response.Count != nil {
 			pagination.TotalCount = response.Count
 		}
-		
+
 		// Calculate current count
 		if resultArray, ok := response.Value.([]interface{}); ok {
 			pagination.CurrentCount = len(resultArray)
 		} else {
 			pagination.CurrentCount = 1 // Single entity
 		}
-		
+
 		// Parse skip and top from options
 		skip := 0
 		top := 0
@@ -1095,14 +1095,14 @@ func (b *ODataMCPBridge) enhanceResponse(response *models.ODataResponse, options
 		if topStr, exists := options[constants.QueryTop]; exists {
 			fmt.Sscanf(topStr, "%d", &top)
 		}
-		
+
 		pagination.Skip = skip
 		pagination.Top = top
-		
+
 		// Determine if there are more results
 		if pagination.TotalCount != nil && top > 0 {
 			pagination.HasMore = int64(skip+pagination.CurrentCount) < *pagination.TotalCount
-			
+
 			// Generate suggested next call if there are more results
 			if pagination.HasMore {
 				nextSkip := skip + pagination.CurrentCount
@@ -1110,20 +1110,20 @@ func (b *ODataMCPBridge) enhanceResponse(response *models.ODataResponse, options
 				pagination.SuggestedNextCall = &suggestedCall
 			}
 		}
-		
+
 		enhanced.Pagination = pagination
 	}
-	
+
 	// Process legacy dates if enabled
 	if b.config.LegacyDates {
 		enhanced.Value = b.convertLegacyDates(enhanced.Value)
 	}
-	
+
 	// Strip metadata if not requested
 	if !b.config.ResponseMetadata {
 		enhanced.Value = b.stripMetadata(enhanced.Value)
 	}
-	
+
 	return enhanced
 }
 
@@ -1132,14 +1132,14 @@ func (b *ODataMCPBridge) applySizeLimits(response *models.ODataResponse) *models
 	if response.Value == nil {
 		return response
 	}
-	
+
 	// Apply item count limit
 	if b.config.MaxItems > 0 {
 		if resultArray, ok := response.Value.([]interface{}); ok {
 			if len(resultArray) > b.config.MaxItems {
 				// Truncate to max items and add warning
 				truncated := resultArray[:b.config.MaxItems]
-				
+
 				// Update response
 				newResponse := &models.ODataResponse{
 					Context:  response.Context,
@@ -1149,7 +1149,7 @@ func (b *ODataMCPBridge) applySizeLimits(response *models.ODataResponse) *models
 					Error:    response.Error,
 					Metadata: response.Metadata,
 				}
-				
+
 				// Add truncation warning
 				if newResponse.Metadata == nil {
 					newResponse.Metadata = make(map[string]interface{})
@@ -1158,36 +1158,36 @@ func (b *ODataMCPBridge) applySizeLimits(response *models.ODataResponse) *models
 				newResponse.Metadata["original_count"] = len(resultArray)
 				newResponse.Metadata["max_items"] = b.config.MaxItems
 				newResponse.Metadata["warning"] = fmt.Sprintf("Response truncated from %d to %d items due to size limits", len(resultArray), b.config.MaxItems)
-				
+
 				return newResponse
 			}
 		}
 	}
-	
+
 	// Apply response size limit
 	if b.config.MaxResponseSize > 0 {
 		// Estimate response size by marshaling to JSON
 		jsonData, err := json.Marshal(response.Value)
 		if err == nil && len(jsonData) > b.config.MaxResponseSize {
 			// If it's an array, try to reduce items
-                       if resultArray, ok := response.Value.([]interface{}); ok {
-                               if len(resultArray) == 0 {
-                                       return response
-                               }
+			if resultArray, ok := response.Value.([]interface{}); ok {
+				if len(resultArray) == 0 {
+					return response
+				}
 
-                               // Calculate how many items we can fit
-                               avgItemSize := len(jsonData) / len(resultArray)
-                               if avgItemSize == 0 {
-                                       return response
-                               }
-                               maxItems := b.config.MaxResponseSize / avgItemSize
-                               if maxItems < 1 {
-                                       maxItems = 1
-                               }
-				
+				// Calculate how many items we can fit
+				avgItemSize := len(jsonData) / len(resultArray)
+				if avgItemSize == 0 {
+					return response
+				}
+				maxItems := b.config.MaxResponseSize / avgItemSize
+				if maxItems < 1 {
+					maxItems = 1
+				}
+
 				// Truncate to fit size limit
 				truncated := resultArray[:maxItems]
-				
+
 				// Update response
 				newResponse := &models.ODataResponse{
 					Context:  response.Context,
@@ -1197,7 +1197,7 @@ func (b *ODataMCPBridge) applySizeLimits(response *models.ODataResponse) *models
 					Error:    response.Error,
 					Metadata: response.Metadata,
 				}
-				
+
 				// Add truncation warning
 				if newResponse.Metadata == nil {
 					newResponse.Metadata = make(map[string]interface{})
@@ -1207,12 +1207,12 @@ func (b *ODataMCPBridge) applySizeLimits(response *models.ODataResponse) *models
 				newResponse.Metadata["truncated_count"] = len(truncated)
 				newResponse.Metadata["max_response_size"] = b.config.MaxResponseSize
 				newResponse.Metadata["warning"] = fmt.Sprintf("Response truncated from %d to %d items due to response size limit (%d bytes)", len(resultArray), len(truncated), b.config.MaxResponseSize)
-				
+
 				return newResponse
 			}
 		}
 	}
-	
+
 	return response
 }
 
@@ -1221,7 +1221,7 @@ func (b *ODataMCPBridge) convertLegacyDates(data interface{}) interface{} {
 	if !b.config.LegacyDates {
 		return data
 	}
-	
+
 	// Convert from OData legacy format to ISO for display
 	return utils.ConvertDatesInResponse(data, true)
 }
@@ -1253,34 +1253,34 @@ func (b *ODataMCPBridge) stripMetadata(data interface{}) interface{} {
 func (b *ODataMCPBridge) handleEntityCount(ctx context.Context, entitySetName string, args map[string]interface{}) (interface{}, error) {
 	// Build query options - for count we typically only need filter
 	options := make(map[string]string)
-	
+
 	// Map arguments to handle both Claude-friendly and standard parameter names
 	mappedArgs := make(map[string]interface{})
 	for key, value := range args {
 		mappedKey := b.mapParameterToOData(key)
 		mappedArgs[mappedKey] = value
 	}
-	
+
 	if filter, ok := mappedArgs["$filter"].(string); ok && filter != "" {
 		options[constants.QueryFilter] = filter
 	}
-	
+
 	// Add $inlinecount=allpages to get inline count (OData v2 syntax)
 	options[constants.QueryInlineCount] = "allpages"
 	options[constants.QueryTop] = "0" // We only want the count, not the data
-	
+
 	// Call OData client to get count
 	response, err := b.client.GetEntitySet(ctx, entitySetName, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get entity count: %w", err)
 	}
-	
+
 	// Extract count from response
 	count := int64(0)
 	if response.Count != nil {
 		count = *response.Count
 	}
-	
+
 	// Return count as formatted string
 	return fmt.Sprintf(`{"count": %d}`, count), nil
 }
@@ -1294,18 +1294,18 @@ func (b *ODataMCPBridge) handleEntitySearch(ctx context.Context, entitySetName s
 			return nil, fmt.Errorf("missing required parameter: search_term")
 		}
 	}
-	
+
 	// Build query options
 	options := make(map[string]string)
 	options[constants.QuerySearch] = searchTerm
-	
+
 	// Map arguments to handle both Claude-friendly and standard parameter names
 	mappedArgs := make(map[string]interface{})
 	for key, value := range args {
 		mappedKey := b.mapParameterToOData(key)
 		mappedArgs[mappedKey] = value
 	}
-	
+
 	// Handle optional parameters
 	if top, ok := mappedArgs["$top"].(float64); ok {
 		options[constants.QueryTop] = fmt.Sprintf("%d", int(top))
@@ -1316,19 +1316,19 @@ func (b *ODataMCPBridge) handleEntitySearch(ctx context.Context, entitySetName s
 	if selectParam, ok := mappedArgs["$select"].(string); ok && selectParam != "" {
 		options[constants.QuerySelect] = selectParam
 	}
-	
+
 	// Call OData client to search entities
 	response, err := b.client.GetEntitySet(ctx, entitySetName, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search entities: %w", err)
 	}
-	
+
 	// Format response as JSON string
 	result, err := json.Marshal(response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to format response: %w", err)
 	}
-	
+
 	return string(result), nil
 }
 
@@ -1342,14 +1342,14 @@ func (b *ODataMCPBridge) handleEntityGet(ctx context.Context, entitySetName stri
 			return nil, fmt.Errorf("missing required key property: %s", keyProp)
 		}
 	}
-	
+
 	// Map arguments to handle both Claude-friendly and standard parameter names
 	mappedArgs := make(map[string]interface{})
 	for key, value := range args {
 		mappedKey := b.mapParameterToOData(key)
 		mappedArgs[mappedKey] = value
 	}
-	
+
 	// Build query options for expand/select
 	options := make(map[string]string)
 	if selectParam, ok := mappedArgs["$select"].(string); ok && selectParam != "" {
@@ -1358,19 +1358,19 @@ func (b *ODataMCPBridge) handleEntityGet(ctx context.Context, entitySetName stri
 	if expand, ok := mappedArgs["$expand"].(string); ok && expand != "" {
 		options[constants.QueryExpand] = expand
 	}
-	
+
 	// Call OData client to get entity
 	response, err := b.client.GetEntity(ctx, entitySetName, key, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get entity: %w", err)
 	}
-	
+
 	// Format response as JSON string
 	result, err := json.Marshal(response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to format response: %w", err)
 	}
-	
+
 	return string(result), nil
 }
 
@@ -1383,31 +1383,31 @@ func (b *ODataMCPBridge) handleEntityCreate(ctx context.Context, entitySetName s
 			entityData[k] = v
 		}
 	}
-	
+
 	// Convert numeric fields to strings for SAP OData v2 compatibility
 	// This prevents "Failed to read property 'Quantity' at offset" errors
 	entityData = utils.ConvertNumericsInMap(entityData)
-	
+
 	// Convert date fields to OData legacy format if needed
 	if b.config.LegacyDates {
 		entityData = utils.ConvertDatesInMap(entityData, false) // false = convert ISO to legacy
 	}
-	
+
 	// Call OData client to create entity
 	response, err := b.client.CreateEntity(ctx, entitySetName, entityData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create entity: %w", err)
 	}
-	
+
 	// Enhance response (includes date conversion if enabled)
 	response = b.enhanceResponse(response, make(map[string]string))
-	
+
 	// Format response as JSON string
 	result, err := json.Marshal(response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to format response: %w", err)
 	}
-	
+
 	return string(result), nil
 }
 
@@ -1416,7 +1416,7 @@ func (b *ODataMCPBridge) handleEntityUpdate(ctx context.Context, entitySetName s
 	key := make(map[string]interface{})
 	updateData := make(map[string]interface{})
 	method := constants.PUT // default method
-	
+
 	for k, v := range args {
 		if k == "_method" {
 			if m, ok := v.(string); ok {
@@ -1424,7 +1424,7 @@ func (b *ODataMCPBridge) handleEntityUpdate(ctx context.Context, entitySetName s
 			}
 			continue
 		}
-		
+
 		// Check if this is a key property
 		isKey := false
 		for _, keyProp := range entityType.KeyProperties {
@@ -1434,44 +1434,44 @@ func (b *ODataMCPBridge) handleEntityUpdate(ctx context.Context, entitySetName s
 				break
 			}
 		}
-		
+
 		// If not a key, it's update data
 		if !isKey && !strings.HasPrefix(k, "$") {
 			updateData[k] = v
 		}
 	}
-	
+
 	// Verify we have all required key properties
 	for _, keyProp := range entityType.KeyProperties {
 		if _, exists := key[keyProp]; !exists {
 			return nil, fmt.Errorf("missing required key property: %s", keyProp)
 		}
 	}
-	
+
 	// Convert numeric fields to strings for SAP OData v2 compatibility
 	// This prevents "Failed to read property 'Quantity' at offset" errors
 	updateData = utils.ConvertNumericsInMap(updateData)
-	
+
 	// Convert date fields to OData legacy format if needed
 	if b.config.LegacyDates {
 		updateData = utils.ConvertDatesInMap(updateData, false) // false = convert ISO to legacy
 	}
-	
+
 	// Call OData client to update entity
 	response, err := b.client.UpdateEntity(ctx, entitySetName, key, updateData, method)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update entity: %w", err)
 	}
-	
+
 	// Enhance response (includes date conversion if enabled)
 	response = b.enhanceResponse(response, make(map[string]string))
-	
+
 	// Format response as JSON string
 	result, err := json.Marshal(response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to format response: %w", err)
 	}
-	
+
 	return string(result), nil
 }
 
@@ -1485,13 +1485,13 @@ func (b *ODataMCPBridge) handleEntityDelete(ctx context.Context, entitySetName s
 			return nil, fmt.Errorf("missing required key property: %s", keyProp)
 		}
 	}
-	
+
 	// Call OData client to delete entity
 	_, err := b.client.DeleteEntity(ctx, entitySetName, key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to delete entity: %w", err)
 	}
-	
+
 	// For successful deletes, return a simple success message
 	return `{"status": "success", "message": "Entity deleted successfully"}`, nil
 }
@@ -1508,24 +1508,24 @@ func (b *ODataMCPBridge) handleFunctionCall(ctx context.Context, functionName st
 			}
 		}
 	}
-	
+
 	// Determine HTTP method (default to GET if not specified)
 	method := function.HTTPMethod
 	if method == "" {
 		method = constants.GET
 	}
-	
+
 	// Call OData client to execute function
 	response, err := b.client.CallFunction(ctx, functionName, parameters, method)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call function: %w", err)
 	}
-	
+
 	// Format response as JSON string
 	result, err := json.Marshal(response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to format response: %w", err)
 	}
-	
+
 	return string(result), nil
 }
