@@ -331,24 +331,37 @@ The OData MCP bridge supports two transport mechanisms:
 1. **STDIO (default)** - Standard input/output communication, used by Claude Desktop
 2. **HTTP/SSE** - HTTP server with Server-Sent Events for web-based clients
 
-> ⚠️ **Security Warning**: The HTTP/SSE transport currently does not include authentication. It should only be used in secure, trusted environments such as:
-> - Local development (localhost only)
-> - Private networks with proper firewall rules
-> - Behind a reverse proxy with authentication
+> 🔒 **SECURITY WARNING**: The HTTP/SSE transport has **NO AUTHENTICATION** - anyone who can connect can access your OData service!
 > 
-> **Do NOT expose the HTTP transport directly to the internet without additional security measures.**
+> **By default, HTTP transport is restricted to localhost only for security.**
+> 
+> Safer usage scenarios:
+> - Local development (localhost only) - **DEFAULT & RECOMMENDED**
+> - Behind a reverse proxy with authentication
+> - Private networks with proper firewall rules (requires expert flag)
+> 
+> **NEVER expose the HTTP transport to the internet without additional security measures!**
+> 
+> 🤖 **REMEMBER**: Skynet happened because open MCP-SSE ports were exposed to the internet with sudo rights. Protect the planet, protect humanity - do not use SSE/HTTP transport until it becomes more mature from a security perspective.
 
 #### Using HTTP/SSE Transport
 
 ```bash
-# Start server with HTTP transport on default port 8080
+# Start server on localhost (default: localhost:8080)
 ./odata-mcp --transport http https://services.odata.org/V2/Northwind/Northwind.svc/
 
-# Use custom port
-./odata-mcp --transport http --http-addr :3000 https://services.odata.org/V2/Northwind/Northwind.svc/
+# Use custom localhost port
+./odata-mcp --transport http --http-addr localhost:3000 https://services.odata.org/V2/Northwind/Northwind.svc/
 
-# Bind to specific interface
+# IPv4 localhost
 ./odata-mcp --transport http --http-addr 127.0.0.1:8080 https://services.odata.org/V2/Northwind/Northwind.svc/
+
+# IPv6 localhost  
+./odata-mcp --transport http --http-addr [::1]:8080 https://services.odata.org/V2/Northwind/Northwind.svc/
+
+# ⚠️ DANGEROUS: Expose to network (NOT RECOMMENDED!)
+# Only use if you understand the security implications
+./odata-mcp --transport http --http-addr 0.0.0.0:8080 --i-am-security-expert-i-know-what-i-am-doing https://services.odata.org/V2/Northwind/Northwind.svc/
 ```
 
 When using HTTP transport, the following endpoints are available:
@@ -549,7 +562,8 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `--hints-file` | Path to hints JSON file | `hints.json` in binary dir |
 | `--hint` | Direct hint JSON or text from CLI | |
 | `--transport` | Transport type: 'stdio' or 'http' | `stdio` |
-| `--http-addr` | HTTP server address (with --transport http) | `:8080` |
+| `--http-addr` | HTTP server address (with --transport http) | `localhost:8080` |
+| `--i-am-security-expert-i-know-what-i-am-doing` | DANGEROUS: Allow non-localhost HTTP transport | `false` |
 | `--legacy-dates` | Enable legacy date format conversion | `true` |
 | `--no-legacy-dates` | Disable legacy date format conversion | `false` |
 | `--convert-dates-from-sap` | Convert SAP date formats in responses | `false` |

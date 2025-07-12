@@ -101,7 +101,8 @@ func init() {
 	
 	// Transport options
 	rootCmd.Flags().String("transport", "stdio", "Transport type: 'stdio' or 'http' (SSE)")
-	rootCmd.Flags().String("http-addr", ":8080", "HTTP server address (used with --transport http)")
+	rootCmd.Flags().String("http-addr", "localhost:8080", "HTTP server address (used with --transport http, defaults to localhost only for security)")
+	rootCmd.Flags().Bool("i-am-security-expert-i-know-what-i-am-doing", false, "DANGEROUS: Allow non-localhost HTTP transport. MCP has no authentication!")
 	
 	// Debug options
 	rootCmd.Flags().Bool("trace-mcp", false, "Enable trace logging to debug MCP communication")
@@ -264,6 +265,32 @@ func runBridge(cmd *cobra.Command, args []string) error {
 	switch transportType {
 	case "http", "sse":
 		httpAddr, _ := cmd.Flags().GetString("http-addr")
+		expertMode, _ := cmd.Flags().GetBool("i-am-security-expert-i-know-what-i-am-doing")
+		
+		// Security check: ensure localhost-only unless expert mode
+		if !expertMode && !isLocalhostAddr(httpAddr) {
+			fmt.Fprintf(os.Stderr, "\n⚠️  SECURITY WARNING ⚠️\n")
+			fmt.Fprintf(os.Stderr, "HTTP/SSE transport is UNPROTECTED - no authentication!\n")
+			fmt.Fprintf(os.Stderr, "For security, HTTP transport is restricted to localhost only.\n")
+			fmt.Fprintf(os.Stderr, "Current address '%s' is not localhost.\n\n", httpAddr)
+			fmt.Fprintf(os.Stderr, "To bind to localhost, use:\n")
+			fmt.Fprintf(os.Stderr, "  --http-addr localhost:8080\n")
+			fmt.Fprintf(os.Stderr, "  --http-addr 127.0.0.1:8080\n")
+			fmt.Fprintf(os.Stderr, "  --http-addr [::1]:8080\n\n")
+			fmt.Fprintf(os.Stderr, "If you REALLY need to expose this service (DANGEROUS!), use:\n")
+			fmt.Fprintf(os.Stderr, "  --i-am-security-expert-i-know-what-i-am-doing\n\n")
+			return fmt.Errorf("refusing to start unprotected HTTP transport on non-localhost address")
+		}
+		
+		if expertMode && !isLocalhostAddr(httpAddr) {
+			fmt.Fprintf(os.Stderr, "\n🚨 EXTREME SECURITY WARNING 🚨\n")
+			fmt.Fprintf(os.Stderr, "You are exposing an UNPROTECTED MCP service to the network!\n")
+			fmt.Fprintf(os.Stderr, "MCP has NO authentication mechanism - anyone can connect!\n")
+			fmt.Fprintf(os.Stderr, "This service provides full access to: %s\n", cfg.ServiceURL)
+			fmt.Fprintf(os.Stderr, "Address: %s\n\n", httpAddr)
+			fmt.Fprintf(os.Stderr, "Press Ctrl+C NOW if this is not intentional!\n\n")
+		}
+		
 		if cfg.Verbose {
 			fmt.Fprintf(os.Stderr, "[VERBOSE] Starting HTTP/SSE transport on %s\n", httpAddr)
 		}
@@ -299,6 +326,28 @@ func runBridge(cmd *cobra.Command, args []string) error {
 	case err := <-errChan:
 		return err
 	}
+}
+
+// isLocalhostAddr checks if the given address is localhost-only
+func isLocalhostAddr(addr string) bool {
+	// Handle cases like ":8080" which bind to all interfaces
+	if strings.HasPrefix(addr, ":") {
+		return false
+	}
+	
+	// Extract host part (before the colon)
+	host := addr
+	if idx := strings.LastIndex(addr, ":"); idx != -1 {
+		host = addr[:idx]
+		// Handle IPv6 addresses like [::1]:8080
+		host = strings.Trim(host, "[]")
+	}
+	
+	// Check for localhost variants
+	return host == "localhost" || 
+		host == "127.0.0.1" || 
+		host == "::1" || 
+		host == "" // empty host defaults to localhost
 }
 
 func processAuthentication(cfg *config.Config) error {
