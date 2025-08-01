@@ -802,6 +802,8 @@ This project includes comprehensive security measures to prevent credential leak
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
 
+For questions and community discussion, visit our [GitHub Discussions](https://github.com/oisee/odata_mcp_go/discussions/11).
+
 ### Development
 
 For development setup and testing:
