@@ -4,6 +4,14 @@ A Go implementation of the OData to Model Context Protocol (MCP) bridge, providi
 
 This is a Go port of the Python OData-MCP bridge implementation, designed to be easier to run on different operating systems with better performance and simpler deployment. It supports both OData v2 and v4 services.
 
+## 🆕 What's New (v1.5.0)
+
+- **Streamable HTTP Transport**: Modern MCP protocol (2024-11-05) support with `--transport streamable-http`
+  - Single `/mcp` endpoint with automatic SSE upgrade
+  - Bidirectional communication and session management
+  - Better alignment with Python MCP ecosystem
+  - Backward compatibility with legacy SSE endpoints
+
 ## Features
 
 - **Universal OData Support**: Works with both OData v2 and v4 services
@@ -20,7 +28,7 @@ This is a Go port of the Python OData-MCP bridge implementation, designed to be 
 - **MCP Protocol Debugging**: Built-in trace logging with `--trace-mcp` for troubleshooting
 - **Service-Specific Hints**: Flexible hint system with pattern matching for known service issues
 - **Full MCP Compliance**: Complete protocol implementation for all MCP clients
-- **Multiple Transports**: Support for stdio (default) and HTTP/SSE transports
+- **Multiple Transports**: Support for stdio (default), HTTP/SSE, and Streamable HTTP (2024-11-05 protocol)
 
 ## Installation
 
