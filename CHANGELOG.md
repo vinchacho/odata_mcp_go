@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Streamable HTTP transport** (`--transport streamable-http`)
+  - Modern MCP protocol support (version 2024-11-05)
+  - Single `/mcp` endpoint for all operations
+  - Automatic SSE upgrade for streaming responses
+  - Bidirectional communication support
+  - Session management with Last-Event-ID support
+  - Backward compatibility with legacy SSE endpoint
+  - Better alignment with Python MCP implementations
 - **Operation type filtering** with `--enable` and `--disable` flags
   - Fine-grained control over which operation types are generated
   - Support for operation types: C (create), S (search), F (filter), G (get), U (update), D (delete), A (actions/function imports)

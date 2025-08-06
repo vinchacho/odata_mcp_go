@@ -344,7 +344,24 @@ The OData MCP bridge supports two transport mechanisms:
 > 
 > 🤖 **REMEMBER**: Skynet happened because open MCP-SSE ports were exposed to the internet with sudo rights. Protect the planet, protect humanity - do not use SSE/HTTP transport until it becomes more mature from a security perspective.
 
-#### Using HTTP/SSE Transport
+#### Using Streamable HTTP Transport (Modern MCP Protocol)
+
+**New in v1.5.0**: Support for Streamable HTTP transport (protocol version 2024-11-05)
+
+```bash
+# Start server with Streamable HTTP (recommended for modern clients)
+./odata-mcp --transport streamable-http https://services.odata.org/V2/Northwind/Northwind.svc/
+
+# Use custom localhost port
+./odata-mcp --transport streamable-http --http-addr localhost:3000 https://services.odata.org/V2/Northwind/Northwind.svc/
+```
+
+Streamable HTTP endpoints:
+- `POST /mcp` - Main MCP endpoint (supports automatic SSE upgrade)
+- `GET /health` - Health check endpoint
+- `POST /sse` - Legacy SSE endpoint (for backward compatibility)
+
+#### Using HTTP/SSE Transport (Legacy)
 
 ```bash
 # Start server on localhost (default: localhost:8080)
@@ -364,8 +381,7 @@ The OData MCP bridge supports two transport mechanisms:
 ./odata-mcp --transport http --http-addr 0.0.0.0:8080 --i-am-security-expert-i-know-what-i-am-doing https://services.odata.org/V2/Northwind/Northwind.svc/
 ```
 
-When using HTTP transport, the following endpoints are available:
-
+Legacy HTTP/SSE endpoints:
 - `GET /health` - Health check endpoint
 - `GET /sse` - Server-Sent Events endpoint for real-time communication
 - `POST /rpc` - JSON-RPC endpoint for request/response communication
@@ -561,8 +577,8 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `--disable` | Disable specified operation types (C,S,F,G,U,D,A,R) | |
 | `--hints-file` | Path to hints JSON file | `hints.json` in binary dir |
 | `--hint` | Direct hint JSON or text from CLI | |
-| `--transport` | Transport type: 'stdio' or 'http' | `stdio` |
-| `--http-addr` | HTTP server address (with --transport http) | `localhost:8080` |
+| `--transport` | Transport type: 'stdio', 'http' (SSE), or 'streamable-http' | `stdio` |
+| `--http-addr` | HTTP server address (with --transport http/streamable-http) | `localhost:8080` |
 | `--i-am-security-expert-i-know-what-i-am-doing` | DANGEROUS: Allow non-localhost HTTP transport | `false` |
 | `--legacy-dates` | Enable legacy date format conversion | `true` |
 | `--no-legacy-dates` | Disable legacy date format conversion | `false` |

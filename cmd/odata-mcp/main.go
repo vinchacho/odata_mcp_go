@@ -100,8 +100,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&cfg.ReadOnlyButFunctions, "robf", false, "Read-only but functions (shorthand for --read-only-but-functions)")
 
 	// Transport options
-	rootCmd.Flags().String("transport", "stdio", "Transport type: 'stdio' or 'http' (SSE)")
-	rootCmd.Flags().String("http-addr", "localhost:8080", "HTTP server address (used with --transport http, defaults to localhost only for security)")
+	rootCmd.Flags().String("transport", "stdio", "Transport type: 'stdio', 'http' (SSE), or 'streamable-http' (modern MCP)")
+	rootCmd.Flags().String("http-addr", "localhost:8080", "HTTP server address (used with --transport http/streamable-http, defaults to localhost only for security)")
 	rootCmd.Flags().Bool("i-am-security-expert-i-know-what-i-am-doing", false, "DANGEROUS: Allow non-localhost HTTP transport. MCP has no authentication!")
 
 	// Debug options
@@ -263,6 +263,40 @@ func runBridge(cmd *cobra.Command, args []string) error {
 
 	var trans transport.Transport
 	switch transportType {
+	case "streamable-http", "streamable":
+		httpAddr, _ := cmd.Flags().GetString("http-addr")
+		expertMode, _ := cmd.Flags().GetBool("i-am-security-expert-i-know-what-i-am-doing")
+
+		// Security check: ensure localhost-only unless expert mode
+		if !expertMode && !isLocalhostAddr(httpAddr) {
+			fmt.Fprintf(os.Stderr, "\n⚠️  SECURITY WARNING ⚠️\n")
+			fmt.Fprintf(os.Stderr, "Streamable HTTP transport is UNPROTECTED - no authentication!\n")
+			fmt.Fprintf(os.Stderr, "For security, HTTP transport is restricted to localhost only.\n")
+			fmt.Fprintf(os.Stderr, "Current address '%s' is not localhost.\n\n", httpAddr)
+			fmt.Fprintf(os.Stderr, "To bind to localhost, use:\n")
+			fmt.Fprintf(os.Stderr, "  --http-addr localhost:8080\n")
+			fmt.Fprintf(os.Stderr, "  --http-addr 127.0.0.1:8080\n")
+			fmt.Fprintf(os.Stderr, "  --http-addr [::1]:8080\n\n")
+			fmt.Fprintf(os.Stderr, "If you REALLY need to expose this service (DANGEROUS!), use:\n")
+			fmt.Fprintf(os.Stderr, "  --i-am-security-expert-i-know-what-i-am-doing\n\n")
+			return fmt.Errorf("refusing to start unprotected HTTP transport on non-localhost address")
+		}
+
+		if expertMode && !isLocalhostAddr(httpAddr) {
+			fmt.Fprintf(os.Stderr, "\n🚨 EXTREME SECURITY WARNING 🚨\n")
+			fmt.Fprintf(os.Stderr, "You are exposing an UNPROTECTED MCP service to the network!\n")
+			fmt.Fprintf(os.Stderr, "MCP has NO authentication mechanism - anyone can connect!\n")
+			fmt.Fprintf(os.Stderr, "This service provides full access to: %s\n", cfg.ServiceURL)
+			fmt.Fprintf(os.Stderr, "Address: %s\n\n", httpAddr)
+			fmt.Fprintf(os.Stderr, "Press Ctrl+C NOW if this is not intentional!\n\n")
+		}
+
+		if cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Starting Streamable HTTP transport (protocol 2024-11-05) on %s\n", httpAddr)
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Main endpoint: http://%s/mcp\n", httpAddr)
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Health endpoint: http://%s/health\n", httpAddr)
+		}
+		trans = http.NewStreamableHTTP(httpAddr, handler, expertMode)
 	case "http", "sse":
 		httpAddr, _ := cmd.Flags().GetString("http-addr")
 		expertMode, _ := cmd.Flags().GetBool("i-am-security-expert-i-know-what-i-am-doing")
