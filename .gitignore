@@ -8,6 +8,7 @@ odata-mcp.exe
 # IMPORTANT: Files with credentials/secrets
 .zmcp.json
 zmcp.json
+.mcp.json
 *zmcp*.json
 *.key
 *.pem

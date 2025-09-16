@@ -87,11 +87,11 @@ type EntitySet struct {
 	Name       string   `xml:"Name,attr"`
 	EntityType string   `xml:"EntityType,attr"`
 	// SAP-specific attributes
-	Creatable  string `xml:"creatable,attr"`
-	Updatable  string `xml:"updatable,attr"`
-	Deletable  string `xml:"deletable,attr"`
-	Searchable string `xml:"searchable,attr"`
-	Pageable   string `xml:"pageable,attr"`
+	Creatable  string `xml:"sap:creatable,attr"`
+	Updatable  string `xml:"sap:updatable,attr"`
+	Deletable  string `xml:"sap:deletable,attr"`
+	Searchable string `xml:"sap:searchable,attr"`
+	Pageable   string `xml:"sap:pageable,attr"`
 }
 
 // FunctionImport represents an OData function import
@@ -209,13 +209,19 @@ func parseEntitySet(es EntitySet, namespace string) *models.EntitySet {
 	}
 
 	entitySet := &models.EntitySet{
-		Name:       es.Name,
-		EntityType: entityTypeName,
-		Creatable:  es.Creatable != "false", // Default to true
-		Updatable:  es.Updatable != "false", // Default to true
-		Deletable:  es.Deletable != "false", // Default to true
-		Searchable: es.Searchable == "true", // Default to false
-		Pageable:   es.Pageable != "false",  // Default to true
+		Name:          es.Name,
+		EntityType:    entityTypeName,
+		Creatable:     es.Creatable != "false", // Default to true
+		Updatable:     es.Updatable != "false", // Default to true
+		Deletable:     es.Deletable != "false", // Default to true
+		Searchable:    es.Searchable == "true", // Default to false
+		Pageable:      es.Pageable != "false",  // Default to true
+		// SAP-specific fields (set if attribute is present)
+		SAPCreatable:  es.Creatable != "",
+		SAPUpdatable:  es.Updatable != "",
+		SAPDeletable:  es.Deletable != "",
+		SAPSearchable: es.Searchable != "",
+		SAPPageable:   es.Pageable != "",
 	}
 
 	return entitySet

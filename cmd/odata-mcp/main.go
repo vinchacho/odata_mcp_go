@@ -204,6 +204,14 @@ func runBridge(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Validate max-items parameter
+	if cfg.MaxItems > 10000 {
+		return fmt.Errorf("--max-items value %d is too large (maximum: 10000). Large values can cause memory issues", cfg.MaxItems)
+	}
+	if cfg.MaxItems < 0 {
+		return fmt.Errorf("--max-items value must be positive (got: %d)", cfg.MaxItems)
+	}
+
 	// Parse entity and function filters
 	if cfg.Entities != "" {
 		cfg.AllowedEntities = parseCommaSeparated(cfg.Entities)
