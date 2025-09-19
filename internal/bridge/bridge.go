@@ -51,6 +51,14 @@ func NewODataMCPBridge(cfg *config.Config) (*ODataMCPBridge, error) {
 	// Create MCP server
 	mcpServer := mcp.NewServer(constants.MCPServerName, constants.MCPServerVersion)
 
+	// Set protocol version if specified
+	if cfg.ProtocolVersion != "" {
+		mcpServer.SetProtocolVersion(cfg.ProtocolVersion)
+		if cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Using MCP protocol version: %s\n", cfg.ProtocolVersion)
+		}
+	}
+
 	// Create hint manager
 	hintMgr := hint.NewManager()
 

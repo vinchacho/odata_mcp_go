@@ -91,3 +91,54 @@ fix: Address critical issues with SAP metadata parsing and max-items validation
 
 Fixes #12, #13, provides guidance for #14
 ```
+
+## Issue: SAP GUID Filtering Format
+
+### Problem
+SAP OData services require GUID values in filter expressions to be formatted with the `guid` prefix:
+- ❌ Incorrect: `ChemicalRevisionUUID eq '06023781-a5b8-1eec-bf88-402534c04747'`
+- ✅ Correct: `ChemicalRevisionUUID eq guid'06023781-a5b8-1eec-bf88-402534c04747'`
+
+### Root Cause
+The OData specification allows different formats for GUID values in filters. While standard OData accepts quoted GUIDs, SAP's implementation requires the `guid` prefix for proper type recognition.
+
+### Fix Applied
+Added automatic GUID format transformation for SAP services:
+
+1. **SAP Service Detection** (`isSAPService()` function):
+   - URL patterns (containing "sap", "s4hana", "odata.sap")
+   - SAP-specific metadata attributes
+   - Service namespace containing "sap"
+   - Hints configuration with service_type containing "SAP"
+
+2. **GUID Format Transformation** (`transformFilterForSAP()` function):
+   - Identifies all properties with type `Edm.Guid` in the entity type
+   - Parses filter expressions to find GUID values
+   - Automatically prefixes GUID values with `guid` for SAP compatibility
+
+3. **Code Changes**:
+   - `internal/bridge/bridge.go`: Added transformation functions
+   - `internal/models/models.go`: Added SAP-specific fields to EntitySet struct
+   - `internal/metadata/parser.go`: Updated parser to capture SAP-specific attributes
+
+### Testing
+The fix is automatically applied when:
+1. Service is detected as SAP
+2. Filter contains GUID field comparisons
+3. The GUID field is of type `Edm.Guid` in metadata
+
+### Usage
+No changes required for end users. The transformation is automatic.
+
+Users can ensure SAP detection with hints:
+```json
+{
+  "pattern": "*MY_SERVICE*",
+  "service_type": "SAP OData Service",
+  "field_hints": {
+    "ChemicalRevisionUUID": {
+      "type": "Edm.Guid"
+    }
+  }
+}
+```

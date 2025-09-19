@@ -118,6 +118,9 @@ func init() {
 	// Claude Code compatibility
 	rootCmd.Flags().BoolVarP(&cfg.ClaudeCodeFriendly, "claude-code-friendly", "c", false, "Remove $ prefix from OData parameters for Claude Code CLI compatibility")
 
+	// Protocol version override (for AI Foundry compatibility)
+	rootCmd.Flags().StringVar(&cfg.ProtocolVersion, "protocol-version", "", "Override MCP protocol version (e.g., '2025-06-18' for AI Foundry)")
+
 	// Bind flags to viper for environment variable support
 	viper.BindPFlag("service", rootCmd.Flags().Lookup("service"))
 	viper.BindPFlag("username", rootCmd.Flags().Lookup("user"))

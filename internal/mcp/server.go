@@ -33,16 +33,17 @@ type Request struct {
 
 // Server represents an MCP server
 type Server struct {
-	name        string
-	version     string
-	tools       map[string]*Tool
-	toolOrder   []string // Maintains insertion order
-	handlers    map[string]ToolHandler
-	transport   transport.Transport
-	ctx         context.Context
-	cancel      context.CancelFunc
-	mu          sync.RWMutex
-	initialized bool
+	name            string
+	version         string
+	protocolVersion string // MCP protocol version (can be overridden)
+	tools           map[string]*Tool
+	toolOrder       []string // Maintains insertion order
+	handlers        map[string]ToolHandler
+	transport       transport.Transport
+	ctx             context.Context
+	cancel          context.CancelFunc
+	mu              sync.RWMutex
+	initialized     bool
 }
 
 // NewServer creates a new MCP server
@@ -52,14 +53,22 @@ func NewServer(name, version string) *Server {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
-		name:      name,
-		version:   version,
-		tools:     make(map[string]*Tool),
-		toolOrder: make([]string, 0),
-		handlers:  make(map[string]ToolHandler),
-		ctx:       ctx,
+		name:            name,
+		version:         version,
+		protocolVersion: constants.MCPProtocolVersion, // Default protocol version
+		tools:           make(map[string]*Tool),
+		toolOrder:       make([]string, 0),
+		handlers:        make(map[string]ToolHandler),
+		ctx:             ctx,
 		cancel:    cancel,
 	}
+}
+
+// SetProtocolVersion sets the MCP protocol version to use
+func (s *Server) SetProtocolVersion(version string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.protocolVersion = version
 }
 
 // AddTool registers a new tool with the server
@@ -243,20 +252,21 @@ func (s *Server) createResponse(id interface{}, result interface{}) (*transport.
 
 // handleInitializeV2 handles the initialize request for transport
 func (s *Server) handleInitializeV2(req *Request) (*transport.Message, error) {
+	// Order fields to match AI Foundry client expectations
 	result := map[string]interface{}{
-		"protocolVersion": constants.MCPProtocolVersion,
 		"capabilities": map[string]interface{}{
 			"prompts": map[string]interface{}{
 				"listChanged": false,
 			},
 			"resources": map[string]interface{}{
-				"subscribe":   false,
 				"listChanged": false,
+				"subscribe":   false,
 			},
 			"tools": map[string]interface{}{
 				"listChanged": true,
 			},
 		},
+		"protocolVersion": s.protocolVersion, // Use configurable version
 		"serverInfo": map[string]interface{}{
 			"name":    s.name,
 			"version": s.version,
