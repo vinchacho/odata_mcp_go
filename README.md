@@ -4,13 +4,22 @@ A Go implementation of the OData to Model Context Protocol (MCP) bridge, providi
 
 This is a Go port of the Python OData-MCP bridge implementation, designed to be easier to run on different operating systems with better performance and simpler deployment. It supports both OData v2 and v4 services.
 
-## 🆕 What's New (v1.5.0)
+## 🆕 What's New (v1.5.1)
 
-- **Streamable HTTP Transport**: Modern MCP protocol (2024-11-05) support with `--transport streamable-http`
+- **AI Foundry Compatibility**: Full support for AI Foundry's MCP client
+  - Configurable protocol version with `--protocol-version` flag
+  - Support for protocol version `2025-06-18` (AI Foundry)
+  - Maintains backward compatibility with Claude (default: `2024-11-05`)
+  - See [AI Foundry Compatibility Guide](AI_FOUNDRY_COMPATIBILITY.md) for details
+
+- **SAP GUID Filtering** (v1.5.0): Automatic formatting of GUID values for SAP OData services
+  - Transforms `'uuid'` to `guid'uuid'` format automatically
+  - No configuration needed - automatic SAP service detection
+
+- **Streamable HTTP Transport** (v1.5.0): Modern MCP protocol support with `--transport streamable-http`
   - Single `/mcp` endpoint with automatic SSE upgrade
   - Bidirectional communication and session management
   - Better alignment with Python MCP ecosystem
-  - Backward compatibility with legacy SSE endpoints
 
 ## Features
 
@@ -28,7 +37,8 @@ This is a Go port of the Python OData-MCP bridge implementation, designed to be 
 - **MCP Protocol Debugging**: Built-in trace logging with `--trace-mcp` for troubleshooting
 - **Service-Specific Hints**: Flexible hint system with pattern matching for known service issues
 - **Full MCP Compliance**: Complete protocol implementation for all MCP clients
-- **Multiple Transports**: Support for stdio (default), HTTP/SSE, and Streamable HTTP (2024-11-05 protocol)
+- **Multiple Transports**: Support for stdio (default), HTTP/SSE, and Streamable HTTP
+- **AI Foundry Compatible**: Configurable protocol version for AI Foundry and other MCP clients
 
 ## Installation
 
@@ -332,6 +342,34 @@ The server internally maps these friendly names back to their OData equivalents 
     }
 }
 
+### AI Foundry Configuration
+
+For AI Foundry integration, use the `--protocol-version` flag to specify the `2025-06-18` protocol:
+
+```json
+{
+    "mcpServers": {
+        "odata-for-ai-foundry": {
+            "command": "/usr/local/bin/odata-mcp",
+            "args": [
+                "--service",
+                "https://your-odata-service.com/",
+                "--protocol-version", "2025-06-18",
+                "--user", "your-username",
+                "--password", "your-password"
+            ]
+        }
+    }
+}
+```
+
+Or via command line:
+```bash
+./odata-mcp --service https://your-service.com/odata --protocol-version "2025-06-18"
+```
+
+See the [AI Foundry Compatibility Guide](AI_FOUNDRY_COMPATIBILITY.md) for detailed setup instructions.
+
 ### Transport Options
 
 The OData MCP bridge supports two transport mechanisms:
@@ -597,6 +635,7 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `--max-items` | Maximum number of items in response | `100` |
 | `--verbose-errors` | Provide detailed error context | `false` |
 | `--claude-code-friendly, -c` | Remove $ prefix from OData parameters for Claude Code CLI compatibility | `false` |
+| `--protocol-version` | Override MCP protocol version (e.g., '2025-06-18' for AI Foundry) | `2024-11-05` |
 
 ### Environment Variables
 

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Build release binaries for OData MCP Bridge v1.5.0
+# Build release binaries for OData MCP Bridge v1.5.1
 
-VERSION="v1.5.0"
+VERSION="v1.5.1"
 BINARY_NAME="odata-mcp"
 BUILD_DIR="dist"
 
