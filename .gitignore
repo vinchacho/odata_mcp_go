@@ -38,6 +38,7 @@ coverage/*
 .claude/*
 .claude/
 claude.*
+!CLAUDE.md
 # Hidden files (be specific to avoid ignoring .github)
 # Environment files with credentials
 .env.test
