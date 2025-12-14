@@ -413,12 +413,25 @@ go test -v -cover ./internal/transport/...
 
 ## 3. Reliability Improvements
 
-### 3.1 Add Retry with Exponential Backoff
+### 3.1 Add Retry with Exponential Backoff ✅ DONE (v1.6.0)
 
 **ID**: RL-1
 **Effort**: 2-3 hours
 **Risk**: Medium
 **Priority**: High
+**Status**: ✅ **IMPLEMENTED** in v1.6.0 — See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) Phase 1
+
+**Implementation Summary**:
+
+- `internal/client/retry.go` - RetryConfig with exponential backoff + jitter
+- `internal/client/retry_test.go` - Unit tests
+- `internal/client/retry_integration_test.go` - Integration tests with mock server
+- CLI flags: `--retry-max-attempts`, `--retry-initial-backoff-ms`, `--retry-max-backoff-ms`, `--retry-backoff-multiplier`
+- Env vars: `ODATA_RETRY_*`
+- Retryable: 429, 500, 502, 503, 504
+- CSRF refresh integrated without counting toward retry limit
+
+**Original Spec** (preserved for reference):
 
 **Current State**: Only CSRF 403 retried (once). No retry on transient errors.
 

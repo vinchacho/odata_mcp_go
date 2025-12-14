@@ -12,6 +12,8 @@ This plan outlines the implementation of three key improvements identified in th
 |---------|----------|--------|--------|----------------|
 | Credential Masking | HIGH | Small | Security hygiene | v1.6.0 ✅ |
 | Exponential Backoff Retry | HIGH | Small | Improved reliability | v1.6.0 ✅ |
+| Quick Wins (Code Quality) | HIGH | Tiny | Technical debt | v1.6.1 |
+| Test Coverage | HIGH | Medium | Reliability | v1.6.2 |
 | Token-Optimized Discovery | HIGH | Large | ~90% token reduction | v1.7.0 |
 | Skill Generator | MEDIUM | Medium | AI-native workflows | v1.8.0 |
 
@@ -19,8 +21,12 @@ This plan outlines the implementation of three key improvements identified in th
 
 1. ✅ Credential Masking (foundation for safe logging)
 2. ✅ Exponential Backoff Retry (quick win, improves reliability)
-3. Token-Optimized Discovery (largest impact, most complex)
-4. Skill Generator (AI-native documentation & workflows)
+3. Quick Wins - code quality fixes (5 min each)
+4. Test Coverage - unit tests for uncovered packages
+5. Token-Optimized Discovery (largest impact, most complex)
+6. Skill Generator (AI-native documentation & workflows)
+
+> **Note**: This document complements [IMPROVEMENTS.md](IMPROVEMENTS.md) which contains the detailed backlog of all improvement opportunities. Items marked with IDs (CQ-*, TC-*, RL-*, FE-*) reference that document.
 
 ---
 
@@ -481,6 +487,170 @@ func TestIsCSRFFailure(t *testing.T) {
     assert.False(t, IsCSRFFailure(resp, []byte("CSRF"))) // Wrong status code
 }
 ```
+
+---
+
+## Phase 1.5: Quick Wins (v1.6.1)
+
+These are low-effort, low-risk fixes from the [IMPROVEMENTS.md](IMPROVEMENTS.md) backlog that should be done before larger features.
+
+### 1.5.1 Replace Deprecated io/ioutil (CQ-1)
+
+**Effort**: 5 minutes | **Risk**: Low
+
+```go
+// Current (internal/mcp/server.go:7)
+import "io/ioutil"
+log.SetOutput(ioutil.Discard)
+
+// Target
+import "io"
+log.SetOutput(io.Discard)
+```
+
+**Validation**: `grep -r "io/ioutil" internal/ && go build ./...`
+
+---
+
+### 1.5.2 Fix Swallowed JSON Marshal Error (CQ-2)
+
+**Effort**: 10 minutes | **Risk**: Low
+
+```go
+// Current (internal/debug/trace.go:70)
+jsonData, _ := json.Marshal(entry)
+
+// Target
+jsonData, err := json.Marshal(entry)
+if err != nil {
+    fmt.Fprintf(os.Stderr, "[TRACE ERROR] Failed to marshal entry: %v\n", err)
+    return
+}
+```
+
+---
+
+### 1.5.3 Fix Swallowed Body Read Error (CQ-3)
+
+**Effort**: 10 minutes | **Risk**: Low
+
+In CSRF retry path (`internal/client/client.go`), handle body read error instead of ignoring it.
+
+---
+
+### 1.5.4 Fix Constant Inconsistencies (CQ-4)
+
+**Effort**: 15 minutes | **Risk**: Low
+
+Align `constants.go` defaults with CLI defaults:
+
+| Constant | constants.go | main.go | Action |
+|----------|-------------|---------|--------|
+| MaxResponseSize | 10MB | 5MB | Align to 5MB |
+| MaxItems | 1000 | 100 | Align to 100 |
+
+---
+
+### 1.5.5 v1.6.1 Milestone Checklist
+
+- [ ] CQ-1: Replace `io/ioutil` with `io`
+- [ ] CQ-2: Handle JSON marshal error in trace.go
+- [ ] CQ-3: Handle body read error in CSRF path
+- [ ] CQ-4: Align constant defaults
+
+---
+
+## Phase 1.6: Test Coverage (v1.6.2)
+
+Current test coverage is heavily skewed toward integration tests. These unit tests fill critical gaps.
+
+### 1.6.1 Config Package Tests (TC-1)
+
+**Effort**: 1-2 hours | **Current Coverage**: 0%
+
+**Functions to Test**:
+
+| Function | Test Cases |
+|----------|------------|
+| `HasBasicAuth()` | empty, partial, complete credentials |
+| `HasCookieAuth()` | empty, populated |
+| `UsePostfix()` | `NoPostfix` true/false |
+| `IsReadOnly()` | none, `--read-only`, `--read-only-but-functions` |
+| `IsOperationEnabled(rune)` | enable/disable combos, R expansion |
+
+**File**: `internal/config/config_test.go` (NEW)
+
+---
+
+### 1.6.2 Hint Manager Tests (TC-2)
+
+**Effort**: 1-2 hours | **Current Coverage**: 0%
+
+**Functions to Test**:
+
+| Function | Test Cases |
+|----------|------------|
+| `LoadFromFile(path)` | valid file, missing file, invalid JSON |
+| `SetCLIHint(hint)` | JSON string, plain text, invalid |
+| `GetHints(url)` | exact match, wildcard, no match, priority merge |
+
+**File**: `internal/hint/hint_test.go` (NEW)
+
+---
+
+### 1.6.3 Handler Unit Tests (TC-3)
+
+**Effort**: 4-6 hours | **Current Coverage**: 0% (indirect only)
+
+Mock the OData client interface and test each handler in `internal/bridge/bridge.go`:
+
+1. `handleServiceInfo`
+2. `handleEntityFilter`
+3. `handleEntityCount`
+4. `handleEntitySearch`
+5. `handleEntityGet`
+6. `handleEntityCreate`
+7. `handleEntityUpdate`
+8. `handleEntityDelete`
+9. `handleFunctionCall`
+
+**File**: `internal/bridge/bridge_handler_test.go` (NEW)
+
+---
+
+### 1.6.4 MCP Server Unit Tests (TC-4)
+
+**Effort**: 2-3 hours | **Current Coverage**: 0%
+
+Test message routing and tool registration in `internal/mcp/server.go`.
+
+**File**: `internal/mcp/server_test.go` (NEW)
+
+---
+
+### 1.6.5 Transport Layer Tests (TC-5)
+
+**Effort**: 4-6 hours | **Current Coverage**: 0%
+
+| Component | File | Key Methods |
+|-----------|------|-------------|
+| STDIO | `stdio/stdio.go` | `Start`, `ReadMessage`, `WriteMessage` |
+| HTTP/SSE | `http/sse.go` | `Start`, `handleSSE`, `handleRPC` |
+| Streamable | `http/streamable.go` | `Start`, `handleMCP`, `upgradeToSSE` |
+
+**Files**: `internal/transport/*/..._test.go` (NEW)
+
+---
+
+### 1.6.6 v1.6.2 Milestone Checklist
+
+- [ ] TC-1: Config package tests (`internal/config/config_test.go`)
+- [ ] TC-2: Hint manager tests (`internal/hint/hint_test.go`)
+- [ ] TC-3: Handler unit tests (`internal/bridge/bridge_handler_test.go`)
+- [ ] TC-4: MCP server tests (`internal/mcp/server_test.go`)
+- [ ] TC-5: Transport layer tests
+
+**Target Coverage**: >70% for core packages
 
 ---
 
@@ -1008,11 +1178,14 @@ In lazy mode, the AI workflow becomes:
 
 ## Phase 3: Skill Generator (v1.8.0)
 
+> **Note**: The existing `docs/skills/` directory contains **Analysis Skills** — reusable prompts for systematic codebase review (Repo Scout, Test Auditor, etc.). Phase 3's **OData Skills** are different: they are auto-generated guides for using OData MCP tools. The skill generator output will go to a configurable directory (default: `./skills/`), NOT to `docs/skills/`.
+
 ### 3.1 Overview
 
 **Goal:** Auto-generate Claude Code Skills from OData service metadata, creating AI-native documentation that guides LLMs through complex multi-tool workflows.
 
 Skills are markdown files that serve as intelligent usage guides for MCP tools. Unlike raw tool schemas, Skills provide:
+
 - **Context**: What the service/entity is for
 - **Workflows**: Multi-step procedures combining multiple tools
 - **Best Practices**: Recommended patterns, common filters, pagination hints
@@ -1487,6 +1660,23 @@ Add sections for:
 - [x] Update `internal/client/client.go` to use retry config
 - [x] Update documentation (README, CHANGELOG)
 - [ ] Create `docs/RETRY.md` (optional)
+
+### v1.6.1 Milestone (Quick Wins)
+
+- [ ] CQ-1: Replace deprecated `io/ioutil` with `io`
+- [ ] CQ-2: Handle JSON marshal error in `trace.go`
+- [ ] CQ-3: Handle body read error in CSRF path
+- [ ] CQ-4: Align constant defaults (MaxResponseSize, MaxItems)
+
+### v1.6.2 Milestone (Test Coverage)
+
+- [ ] TC-1: Config package tests (`internal/config/config_test.go`)
+- [ ] TC-2: Hint manager tests (`internal/hint/hint_test.go`)
+- [ ] TC-3: Handler unit tests (`internal/bridge/bridge_handler_test.go`)
+- [ ] TC-4: MCP server tests (`internal/mcp/server_test.go`)
+- [ ] TC-5: Transport layer tests
+
+**Target**: >70% coverage for core packages
 
 ### v1.7.0 Milestone (Token Optimization)
 
