@@ -463,6 +463,13 @@ Target: Consistent logger abstraction with ERROR, VERBOSE, TRACE levels.
 
 Historical record of completed work.
 
+### v1.6.1 (December 2025)
+
+- ✅ CQ-1: Replace deprecated `io/ioutil` with `io`
+- ✅ CQ-2: Handle JSON marshal error in trace.go
+- ✅ CQ-3: Body read error handling (already fixed)
+- ✅ CQ-4: Align constant defaults with CLI
+
 ### v1.6.0 (December 2025)
 
 - ✅ Credential masking in verbose output
@@ -500,15 +507,15 @@ Key files and their improvement opportunities:
 
 | File | Issues |
 |------|--------|
-| `cmd/odata-mcp/main.go` | TODO (pretty print) |
-| `internal/bridge/bridge.go` | 0% handler test coverage |
+| `cmd/odata-mcp/main.go` | TODO (pretty print - FE-1) |
+| `internal/bridge/bridge.go` | 0% handler test coverage (TC-3) |
 | `internal/client/client.go` | — |
-| `internal/mcp/server.go` | Deprecated import (CQ-1) |
+| `internal/mcp/server.go` | ~~Deprecated import (CQ-1)~~ ✅ Fixed |
 | `internal/config/config.go` | 0% test coverage (TC-1) |
 | `internal/hint/hint.go` | 0% test coverage (TC-2) |
-| `internal/debug/trace.go` | Swallowed error (CQ-2) |
+| `internal/debug/trace.go` | ~~Swallowed error (CQ-2)~~ ✅ Fixed |
 | `internal/transport/http/sse.go` | Dropped messages (RL-2), 0% coverage (TC-5) |
-| `internal/constants/constants.go` | Inconsistent defaults (CQ-4) |
+| `internal/constants/constants.go` | ~~Inconsistent defaults (CQ-4)~~ ✅ Fixed |
 
 ---
 
