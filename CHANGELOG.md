@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replace deprecated `io/ioutil` with `io` in MCP server (Go 1.16+)
 - Handle JSON marshal error in trace logging instead of swallowing it
 - Align constant defaults (`DefaultMaxResponseSize`: 5MB, `DefaultMaxItems`: 100) with CLI defaults
+- **Fix race condition in ODataClient** - Add mutex guards for concurrent access to CSRF tokens, session cookies, and cookie map
+- **Handle multiple EDMX schemas** - Parser now processes all `<Schema>` blocks instead of only the first one
+- **Relax SSE Accept header checks** - Allow combined Accept headers (e.g., `text/event-stream, application/json`)
+- **Propagate metadata parse failures** - Return meaningful errors instead of silently falling back to empty metadata
 
 ## [1.6.0] - 2025-12-14
 

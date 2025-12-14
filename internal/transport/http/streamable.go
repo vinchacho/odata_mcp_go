@@ -292,8 +292,8 @@ func (t *StreamableHTTPTransport) sendSSEMessage(stream *streamContext, eventTyp
 
 // handleLegacySSE handles the legacy /sse endpoint for backward compatibility
 func (t *StreamableHTTPTransport) handleLegacySSE(w http.ResponseWriter, r *http.Request) {
-	// Check if the request accepts SSE
-	if r.Header.Get("Accept") != "text/event-stream" {
+	// Check if the request accepts SSE (allow combined Accept headers like "text/event-stream, application/json")
+	if !strings.Contains(r.Header.Get("Accept"), "text/event-stream") {
 		http.Error(w, "SSE not supported", http.StatusBadRequest)
 		return
 	}

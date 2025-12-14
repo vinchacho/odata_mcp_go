@@ -17,10 +17,10 @@ type EDMX struct {
 	DataServices DataServices `xml:"DataServices"`
 }
 
-// DataServices contains the schema
+// DataServices contains the schemas (can be multiple in real-world EDMX)
 type DataServices struct {
 	XMLName xml.Name `xml:"DataServices"`
-	Schema  Schema   `xml:"Schema"`
+	Schemas []Schema `xml:"Schema"`
 }
 
 // Schema contains entity types, entity sets, and function imports
@@ -126,35 +126,42 @@ func ParseMetadata(data []byte, serviceRoot string) (*models.ODataMetadata, erro
 		return nil, fmt.Errorf("failed to parse metadata XML: %w", err)
 	}
 
-	schema := edmx.DataServices.Schema
-
 	metadata := &models.ODataMetadata{
 		ServiceRoot:     serviceRoot,
 		EntityTypes:     make(map[string]*models.EntityType),
 		EntitySets:      make(map[string]*models.EntitySet),
 		FunctionImports: make(map[string]*models.FunctionImport),
-		SchemaNamespace: schema.Namespace,
-		ContainerName:   schema.EntityContainer.Name,
 		Version:         edmx.Version,
 		ParsedAt:        time.Now(),
 	}
 
-	// Parse entity types
-	for _, et := range schema.EntityTypes {
-		entityType := parseEntityType(et)
-		metadata.EntityTypes[et.Name] = entityType
-	}
+	// Process all schemas (real-world EDMX files can have multiple)
+	for _, schema := range edmx.DataServices.Schemas {
+		// Use first schema's namespace and container name as primary
+		if metadata.SchemaNamespace == "" {
+			metadata.SchemaNamespace = schema.Namespace
+		}
+		if metadata.ContainerName == "" && schema.EntityContainer.Name != "" {
+			metadata.ContainerName = schema.EntityContainer.Name
+		}
 
-	// Parse entity sets
-	for _, es := range schema.EntityContainer.EntitySets {
-		entitySet := parseEntitySet(es, schema.Namespace)
-		metadata.EntitySets[es.Name] = entitySet
-	}
+		// Parse entity types from this schema
+		for _, et := range schema.EntityTypes {
+			entityType := parseEntityType(et)
+			metadata.EntityTypes[et.Name] = entityType
+		}
 
-	// Parse function imports
-	for _, fi := range schema.EntityContainer.FunctionImports {
-		functionImport := parseFunctionImport(fi)
-		metadata.FunctionImports[fi.Name] = functionImport
+		// Parse entity sets from this schema's container
+		for _, es := range schema.EntityContainer.EntitySets {
+			entitySet := parseEntitySet(es, schema.Namespace)
+			metadata.EntitySets[es.Name] = entitySet
+		}
+
+		// Parse function imports from this schema's container
+		for _, fi := range schema.EntityContainer.FunctionImports {
+			functionImport := parseFunctionImport(fi)
+			metadata.FunctionImports[fi.Name] = functionImport
+		}
 	}
 
 	return metadata, nil

@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/zmcp/odata-mcp/internal/constants"
@@ -30,6 +31,7 @@ type ODataClient struct {
 	sessionCookies []*http.Cookie // Track session cookies from server
 	isV4           bool           // Whether the service is OData v4
 	retryConfig    *RetryConfig   // Retry configuration for failed requests
+	mu             sync.RWMutex   // Guards mutable fields: csrfToken, sessionCookies, cookies
 }
 
 // encodeQueryParams encodes URL query parameters with proper space encoding
@@ -66,6 +68,8 @@ func (c *ODataClient) SetBasicAuth(username, password string) {
 
 // SetCookies configures cookie authentication
 func (c *ODataClient) SetCookies(cookies map[string]string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.cookies = cookies
 }
 
@@ -110,6 +114,10 @@ func (c *ODataClient) buildRequest(ctx context.Context, method, endpoint string,
 	if c.username != "" && c.password != "" {
 		req.SetBasicAuth(c.username, c.password)
 	}
+
+	// Lock for reading mutable fields: cookies, sessionCookies, csrfToken
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	// Set cookies
 	for name, value := range c.cookies {
@@ -221,7 +229,9 @@ func (c *ODataClient) doRequestWithRetry(req *http.Request, bodyBytes []byte) (*
 				}
 
 				csrfRetried = true
+				c.mu.Lock()
 				c.csrfToken = ""
+				c.mu.Unlock()
 
 				// Try to fetch new CSRF token
 				if fetchErr := c.fetchCSRFToken(req.Context()); fetchErr != nil {
@@ -230,7 +240,9 @@ func (c *ODataClient) doRequestWithRetry(req *http.Request, bodyBytes []byte) (*
 				}
 
 				// Update request with new CSRF token and retry (same attempt count)
+				c.mu.RLock()
 				req.Header.Set(constants.CSRFTokenHeader, c.csrfToken)
+				c.mu.RUnlock()
 				if c.verbose {
 					fmt.Fprintf(os.Stderr, "[VERBOSE] Retrying request with new CSRF token...\n")
 				}
@@ -267,7 +279,9 @@ func (c *ODataClient) fetchCSRFToken(ctx context.Context) error {
 	}
 
 	// Clear any existing CSRF token (Python behavior)
+	c.mu.Lock()
 	c.csrfToken = ""
+	c.mu.Unlock()
 
 	// Use service root for CSRF token fetching (more reliable than empty string)
 	req, err := c.buildRequest(ctx, constants.GET, "", nil)
@@ -291,7 +305,9 @@ func (c *ODataClient) fetchCSRFToken(ctx context.Context) error {
 
 	// Store any session cookies from the response
 	if cookies := resp.Cookies(); len(cookies) > 0 {
+		c.mu.Lock()
 		c.sessionCookies = append(c.sessionCookies, cookies...)
+		c.mu.Unlock()
 		if c.verbose {
 			fmt.Fprintf(os.Stderr, "[VERBOSE] Received %d session cookies during token fetch\n", len(cookies))
 			for _, cookie := range cookies {
@@ -323,7 +339,9 @@ func (c *ODataClient) fetchCSRFToken(ctx context.Context) error {
 		return fmt.Errorf("CSRF token not found in response headers")
 	}
 
+	c.mu.Lock()
 	c.csrfToken = token
+	c.mu.Unlock()
 	if c.verbose {
 		fmt.Fprintf(os.Stderr, "[VERBOSE] CSRF token fetched successfully: %s\n", debug.MaskToken(token))
 	}
@@ -375,11 +393,23 @@ func (c *ODataClient) GetMetadata(ctx context.Context) (*models.ODataMetadata, e
 		return nil, fmt.Errorf("failed to read metadata response: %w", err)
 	}
 
-	// Parse metadata XML (to be implemented)
+	// Parse metadata XML
 	metadata, err := c.parseMetadataXML(body)
 	if err != nil {
+		if c.verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Metadata parsing failed: %v, attempting service document fallback...\n", err)
+		}
 		// Fallback to service document if metadata parsing fails
-		return c.getServiceDocument(ctx)
+		fallbackMeta, fallbackErr := c.getServiceDocument(ctx)
+		if fallbackErr != nil {
+			// Return original parse error if fallback also fails
+			return nil, fmt.Errorf("metadata parsing failed: %w (fallback also failed: %v)", err, fallbackErr)
+		}
+		// Check if fallback produced any useful data
+		if len(fallbackMeta.EntitySets) == 0 && len(fallbackMeta.FunctionImports) == 0 {
+			return nil, fmt.Errorf("metadata parsing failed: %w (service document fallback returned no entity sets or functions)", err)
+		}
+		return fallbackMeta, nil
 	}
 
 	return metadata, nil

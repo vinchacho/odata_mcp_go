@@ -12,9 +12,10 @@ This document is the single source of truth for planned improvements, active dev
 |---------|--------|-------|
 | v1.6.0 | ✅ Complete | Foundation (Credential Masking, Retry) |
 | v1.6.1 | ✅ Complete | Quick Wins (Code Quality) |
-| v1.6.2 | Pending | Test Coverage |
-| v1.6.3 | Planned | Reliability & DX Quick Fixes |
-| v1.6.4 | Planned | Feature Polish |
+| v1.6.2 | ✅ Complete | Critical Bug Fixes (Concurrency, Parser, SSE) |
+| v1.6.3 | Pending | Test Coverage |
+| v1.6.4 | Planned | Reliability & DX Quick Fixes |
+| v1.6.5 | Planned | Feature Polish |
 | v1.7.0 | Planned | Token-Optimized Discovery |
 | v1.8.0 | Planned | Skill Generator |
 | v1.9.0 | Planned | Advanced Features |
@@ -138,7 +139,7 @@ Align `constants.go` defaults with CLI defaults:
 
 ---
 
-### v1.6.2 — Test Coverage (Pending)
+### v1.6.3 — Test Coverage (Pending)
 
 **Theme**: Fill critical unit test gaps
 
@@ -349,7 +350,7 @@ See [SOLMAN_HUB_ARCHITECTURE.md](SOLMAN_HUB_ARCHITECTURE.md) for the broader Sol
 
 ---
 
-### v1.6.3 — Reliability & DX Quick Fixes (Planned)
+### v1.6.4 — Reliability & DX Quick Fixes (Planned)
 
 **Theme**: Low-effort reliability and developer experience improvements
 
@@ -414,7 +415,7 @@ linters:
 
 ---
 
-#### v1.6.3 Milestone Checklist
+#### v1.6.4 Milestone Checklist
 
 - [ ] RL-2: Fix dropped SSE messages with logging
 - [ ] RL-3: Add `--http-timeout` and `--metadata-timeout` flags
@@ -422,7 +423,7 @@ linters:
 
 ---
 
-### v1.6.4 — Feature Polish (Planned)
+### v1.6.5 — Feature Polish (Planned)
 
 **Theme**: User-facing feature improvements
 
@@ -463,7 +464,7 @@ Expose HTTP transport settings:
 
 ---
 
-#### v1.6.4 Milestone Checklist
+#### v1.6.5 Milestone Checklist
 
 - [ ] FE-1: Implement `--format` flag (json, pretty, csv)
 - [ ] FE-3: Add Microsoft Dataverse, D365 BC, SuccessFactors hints
@@ -526,6 +527,13 @@ func (l *Logger) Verbose(format string, args ...interface{}) {
 
 Historical record of completed work.
 
+### v1.6.2 (December 2025)
+
+- ✅ Fix race condition in ODataClient with mutex guards for concurrent access
+- ✅ Handle multiple EDMX schemas (parser now processes all `<Schema>` blocks)
+- ✅ Relax SSE Accept header checks (allow combined headers)
+- ✅ Propagate metadata parse failures with meaningful error messages
+
 ### v1.6.1 (December 2025)
 
 - ✅ CQ-1: Replace deprecated `io/ioutil` with `io`
@@ -570,14 +578,16 @@ Key files and their scheduled improvements:
 
 | File | Issues | Target |
 |------|--------|--------|
-| `cmd/odata-mcp/main.go` | Pretty print (FE-1) | v1.6.4 |
-| `internal/bridge/bridge.go` | Handler test coverage (TC-3) | v1.6.2 |
-| `internal/client/client.go` | HTTP timeout (RL-3) | v1.6.3 |
+| `cmd/odata-mcp/main.go` | Pretty print (FE-1) | v1.6.5 |
+| `internal/bridge/bridge.go` | Handler test coverage (TC-3) | v1.6.3 |
+| `internal/client/client.go` | ~~Race condition~~ ✅, HTTP timeout (RL-3) | v1.6.2 ✅, v1.6.4 |
 | `internal/mcp/server.go` | ~~Deprecated import (CQ-1)~~ ✅ | v1.6.1 |
-| `internal/config/config.go` | Test coverage (TC-1) | v1.6.2 |
-| `internal/hint/hint.go` | Test coverage (TC-2), new hints (FE-3) | v1.6.2, v1.6.4 |
+| `internal/config/config.go` | Test coverage (TC-1) | v1.6.3 |
+| `internal/hint/hint.go` | Test coverage (TC-2), new hints (FE-3) | v1.6.3, v1.6.5 |
 | `internal/debug/trace.go` | ~~Swallowed error (CQ-2)~~ ✅ | v1.6.1 |
-| `internal/transport/http/sse.go` | Dropped messages (RL-2), tests (TC-5) | v1.6.3, v1.6.2 |
+| `internal/metadata/parser.go` | ~~Multiple schemas~~ ✅ | v1.6.2 |
+| `internal/transport/http/sse.go` | ~~Accept header check~~ ✅, Dropped messages (RL-2), tests (TC-5) | v1.6.2 ✅, v1.6.4, v1.6.3 |
+| `internal/transport/http/streamable.go` | ~~Accept header check~~ ✅ | v1.6.2 |
 | `internal/constants/constants.go` | ~~Inconsistent defaults (CQ-4)~~ ✅ | v1.6.1 |
 
 ---
