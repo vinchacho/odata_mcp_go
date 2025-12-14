@@ -1,12 +1,12 @@
 # I Taught 15,000 Services How to Deal with Their Trust Issues (And Yours)
 ## Or: How hints.json Became the Enterprise Therapy Session We All Needed
 
-*Alice Vinogradova • Senior Software Engineer at Microsoft • September 2025*
+*Vincent Segami • Senior Software Engineer at CBA • September 2025*
 
 Three months ago I shipped the OData↔MCP bridge. Victory lap, right? Wrong.
 
 My inbox: 💥
-- "Alice, why does SAP return 501 for everything?"
+- "Vincent, why does SAP return 501 for everything?"
 - "Your bridge broke our PO tracking!"
 - "IT DOESN'T WORK WITH [INSERT ANY REAL SAP SERVICE]"
 

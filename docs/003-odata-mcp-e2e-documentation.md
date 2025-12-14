@@ -815,8 +815,8 @@ The technical barrier to AI-enabling your SAP landscape is now lower than ever:
 
 You'll know in three hours if this changes how your organization works with SAP.
 
-*Alice Vinogradova
-Senior Software Engineer, Microsoft
+*Vincent Segami
+Senior Software Engineer, CBA
 December 2024*
 
 ---
