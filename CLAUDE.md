@@ -115,6 +115,7 @@ make help
 |------|---------|
 | `SPEC.md` | Behavioral specification (contracts, requirements) |
 | `README.md` | User documentation |
+| `docs/ROADMAP.md` | Roadmap, backlog, and improvement tracking |
 | `hints.json` | Default service hints (SAP workarounds) |
 | `CHANGELOG.md` | Version history |
 | `AI_FOUNDRY_COMPATIBILITY.md` | Protocol version guide |
