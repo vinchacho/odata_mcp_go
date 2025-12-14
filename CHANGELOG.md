@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Handle multiple EDMX schemas** - Parser now processes all `<Schema>` blocks instead of only the first one
 - **Relax SSE Accept header checks** - Allow combined Accept headers (e.g., `text/event-stream, application/json`)
 - **Propagate metadata parse failures** - Return meaningful errors instead of silently falling back to empty metadata
+- **Fix double-close panic in streamable.go** - Use `sync.Once` to ensure stream done channel is closed exactly once
+- **Fix context propagation in MCP server** - Tool handlers now receive HTTP request context for proper cancellation
+- **Fix concurrent ResponseWriter writes** - Add mutex guard for SSE message writes and ping keepalives
 
 ## [1.6.0] - 2025-12-14
 

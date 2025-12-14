@@ -26,11 +26,13 @@ type StreamableHTTPTransport struct {
 }
 
 type streamContext struct {
-	id       string
-	writer   http.ResponseWriter
-	flusher  http.Flusher
-	done     chan struct{}
-	lastSeen time.Time
+	id        string
+	writer    http.ResponseWriter
+	flusher   http.Flusher
+	done      chan struct{}
+	closeOnce sync.Once // Ensures done channel is closed exactly once
+	writeMu   sync.Mutex // Guards writes to ResponseWriter (not goroutine-safe)
+	lastSeen  time.Time
 }
 
 // NewStreamableHTTP creates a new Streamable HTTP transport
@@ -228,7 +230,7 @@ func (t *StreamableHTTPTransport) upgradeToSSE(w http.ResponseWriter, r *http.Re
 		t.mu.Lock()
 		delete(t.activeStreams, stream.id)
 		t.mu.Unlock()
-		close(stream.done)
+		stream.closeOnce.Do(func() { close(stream.done) })
 	}()
 
 	// Send initial response as first event
@@ -252,12 +254,17 @@ func (t *StreamableHTTPTransport) upgradeToSSE(w http.ResponseWriter, r *http.Re
 	for {
 		select {
 		case <-ticker.C:
-			// Send ping to keep connection alive
-			if _, err := fmt.Fprintf(w, ":ping\n\n"); err != nil {
+			// Send ping to keep connection alive (guard writes)
+			stream.writeMu.Lock()
+			_, err := fmt.Fprintf(w, ":ping\n\n")
+			if err == nil {
+				flusher.Flush()
+				stream.lastSeen = time.Now()
+			}
+			stream.writeMu.Unlock()
+			if err != nil {
 				return
 			}
-			flusher.Flush()
-			stream.lastSeen = time.Now()
 
 		case <-stream.done:
 			return
@@ -278,8 +285,12 @@ func (t *StreamableHTTPTransport) sendSSEMessage(stream *streamContext, eventTyp
 	// Generate event ID
 	eventID := fmt.Sprintf("%s-%d", stream.id, time.Now().UnixNano())
 
+	// Guard writes to ResponseWriter (not goroutine-safe)
+	stream.writeMu.Lock()
+	defer stream.writeMu.Unlock()
+
 	// Send SSE formatted message
-	_, err = fmt.Fprintf(stream.writer, "id: %s\nevent: %s\ndata: %s\n\n", 
+	_, err = fmt.Fprintf(stream.writer, "id: %s\nevent: %s\ndata: %s\n\n",
 		eventID, eventType, jsonData)
 	if err != nil {
 		return err
@@ -317,7 +328,7 @@ func (t *StreamableHTTPTransport) cleanupStreams(ctx context.Context) {
 			now := time.Now()
 			for id, stream := range t.activeStreams {
 				if now.Sub(stream.lastSeen) > 5*time.Minute {
-					close(stream.done)
+					stream.closeOnce.Do(func() { close(stream.done) })
 					delete(t.activeStreams, id)
 				}
 			}

@@ -172,7 +172,7 @@ func (s *Server) HandleMessage(ctx context.Context, msg *transport.Message) (*tr
 	case "tools/list":
 		return s.handleToolsListV2(req)
 	case "tools/call":
-		return s.handleToolsCallV2(req)
+		return s.handleToolsCallV2(ctx, req)
 	case "resources/list":
 		return s.handleResourcesListV2(req)
 	case "prompts/list":
@@ -304,7 +304,7 @@ func (s *Server) handleToolsListV2(req *Request) (*transport.Message, error) {
 }
 
 // handleToolsCallV2 handles the tools/call request for transport
-func (s *Server) handleToolsCallV2(req *Request) (*transport.Message, error) {
+func (s *Server) handleToolsCallV2(ctx context.Context, req *Request) (*transport.Message, error) {
 	params, ok := req.Params["arguments"].(map[string]interface{})
 	if !ok {
 		params = make(map[string]interface{})
@@ -323,7 +323,7 @@ func (s *Server) handleToolsCallV2(req *Request) (*transport.Message, error) {
 		return s.createErrorResponse(req.ID, -32602, "Invalid params", fmt.Sprintf("Tool not found: %s", name)), nil
 	}
 
-	result, err := handler(s.ctx, params)
+	result, err := handler(ctx, params)
 	if err != nil {
 		// Map OData errors to appropriate MCP error codes and provide detailed context
 		errorCode, errorMessage, errorData := s.categorizeError(err, name)
