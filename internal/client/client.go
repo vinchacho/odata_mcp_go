@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -678,10 +679,16 @@ func (c *ODataClient) buildKeyPredicate(key map[string]interface{}) string {
 		}
 	}
 
-	// Composite key
+	// Composite key - iterate deterministically
+	keys := make([]string, 0, len(key))
+	for k := range key {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	var parts []string
-	for k, v := range key {
-		parts = append(parts, fmt.Sprintf("%s=%s", k, c.formatKeyValue(v)))
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%s", k, c.formatKeyValue(key[k])))
 	}
 	return strings.Join(parts, ",")
 }

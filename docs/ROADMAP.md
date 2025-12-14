@@ -13,9 +13,10 @@ This document is the single source of truth for planned improvements, active dev
 | v1.6.0 | ✅ Complete | Foundation (Credential Masking, Retry) |
 | v1.6.1 | ✅ Complete | Quick Wins (Code Quality) |
 | v1.6.2 | ✅ Complete | Critical Bug Fixes (Concurrency, Parser, SSE) |
-| v1.6.3 | Pending | Test Coverage |
-| v1.6.4 | Planned | Reliability & DX Quick Fixes |
-| v1.6.5 | Planned | Feature Polish |
+| v1.6.3 | ✅ Complete | Stability & Thread Safety |
+| v1.6.4 | Next | Test Coverage |
+| v1.6.5 | Planned | Reliability & DX Quick Fixes |
+| v1.6.6 | Planned | Feature Polish |
 | v1.7.0 | Planned | Token-Optimized Discovery |
 | v1.8.0 | Planned | Skill Generator |
 | v1.9.0 | Planned | Advanced Features |
@@ -139,7 +140,103 @@ Align `constants.go` defaults with CLI defaults:
 
 ---
 
-### v1.6.3 — Test Coverage (Pending)
+### v1.6.3 — Stability & Thread Safety ✅ COMPLETE
+
+**Theme**: Concurrency safety and deterministic behavior
+
+#### SS-1: Composite Key Determinism
+
+**Problem**: Map iteration in Go is non-deterministic, causing composite entity keys to generate different URLs on different runs.
+
+**Solution**: Sort key names alphabetically before building URL predicate.
+
+**File**: `internal/client/client.go`
+
+```go
+// Composite key - iterate deterministically
+keys := make([]string, 0, len(key))
+for k := range key {
+    keys = append(keys, k)
+}
+sort.Strings(keys)
+```
+
+---
+
+#### SS-2: SSE Double-Close Panic
+
+**Problem**: `close(stream.done)` called multiple times in concurrent cleanup scenarios.
+
+**Solution**: Guard close with `sync.Once`.
+
+**File**: `internal/transport/http/streamable.go`
+
+```go
+type streamContext struct {
+    // ...
+    closeOnce sync.Once // Ensures done channel is closed exactly once
+}
+
+// Usage
+stream.closeOnce.Do(func() { close(stream.done) })
+```
+
+---
+
+#### SS-3: Concurrent ResponseWriter Writes
+
+**Problem**: `http.ResponseWriter` is not goroutine-safe; concurrent writes cause data corruption.
+
+**Solution**: Protect writes with mutex.
+
+**File**: `internal/transport/http/streamable.go`
+
+```go
+type streamContext struct {
+    // ...
+    writeMu sync.Mutex // Guards writes to ResponseWriter
+}
+```
+
+---
+
+#### SS-4: Context Propagation in MCP Handlers
+
+**Problem**: Tool handlers used server context instead of HTTP request context, preventing proper cancellation.
+
+**Solution**: Pass request context through handler chain.
+
+**File**: `internal/mcp/server.go`
+
+```go
+func (s *Server) handleToolsCallV2(ctx context.Context, req *Request) (*transport.Message, error) {
+    result, err := handler(ctx, params)  // Uses passed context, not s.ctx
+}
+```
+
+---
+
+#### SS-5: MCP Mock Server for Tests
+
+**Problem**: Protocol tests used unreliable mock causing test failures.
+
+**Solution**: Implement proper `httptest.Server` based mock with correct JSON-RPC handling.
+
+**File**: `internal/test/mcp_protocol_test.go`
+
+---
+
+#### Milestone Checklist
+
+- [x] SS-1: Composite key deterministic ordering
+- [x] SS-2: SSE double-close panic fix
+- [x] SS-3: Concurrent ResponseWriter mutex
+- [x] SS-4: Context propagation in MCP handlers
+- [x] SS-5: MCP mock server for tests
+
+---
+
+### v1.6.4 — Test Coverage (Next)
 
 **Theme**: Fill critical unit test gaps
 
@@ -527,6 +624,14 @@ func (l *Logger) Verbose(format string, args ...interface{}) {
 
 Historical record of completed work.
 
+### v1.6.3 (December 2025)
+
+- ✅ Composite key deterministic ordering (sort keys alphabetically)
+- ✅ SSE stream double-close panic fix (sync.Once guard)
+- ✅ Concurrent ResponseWriter write protection (mutex)
+- ✅ Context propagation in MCP tool handlers
+- ✅ MCP mock server for protocol tests (httptest.Server)
+
 ### v1.6.2 (December 2025)
 
 - ✅ Fix race condition in ODataClient with mutex guards for concurrent access
@@ -579,15 +684,15 @@ Key files and their scheduled improvements:
 | File | Issues | Target |
 |------|--------|--------|
 | `cmd/odata-mcp/main.go` | Pretty print (FE-1) | v1.6.5 |
-| `internal/bridge/bridge.go` | Handler test coverage (TC-3) | v1.6.3 |
-| `internal/client/client.go` | ~~Race condition~~ ✅, HTTP timeout (RL-3) | v1.6.2 ✅, v1.6.4 |
+| `internal/bridge/bridge.go` | Handler test coverage (TC-3) | v1.6.4 |
+| `internal/client/client.go` | ~~Race condition~~ ✅, ~~Composite key~~ ✅, HTTP timeout (RL-3) | v1.6.2 ✅, v1.6.3 ✅, v1.6.5 |
 | `internal/mcp/server.go` | ~~Deprecated import (CQ-1)~~ ✅ | v1.6.1 |
-| `internal/config/config.go` | Test coverage (TC-1) | v1.6.3 |
-| `internal/hint/hint.go` | Test coverage (TC-2), new hints (FE-3) | v1.6.3, v1.6.5 |
+| `internal/config/config.go` | Test coverage (TC-1) | v1.6.4 |
+| `internal/hint/hint.go` | Test coverage (TC-2), new hints (FE-3) | v1.6.4, v1.6.6 |
 | `internal/debug/trace.go` | ~~Swallowed error (CQ-2)~~ ✅ | v1.6.1 |
 | `internal/metadata/parser.go` | ~~Multiple schemas~~ ✅ | v1.6.2 |
-| `internal/transport/http/sse.go` | ~~Accept header check~~ ✅, Dropped messages (RL-2), tests (TC-5) | v1.6.2 ✅, v1.6.4, v1.6.3 |
-| `internal/transport/http/streamable.go` | ~~Accept header check~~ ✅ | v1.6.2 |
+| `internal/transport/http/sse.go` | ~~Accept header check~~ ✅, Dropped messages (RL-2), tests (TC-5) | v1.6.2 ✅, v1.6.5, v1.6.4 |
+| `internal/transport/http/streamable.go` | ~~Accept header check~~ ✅, ~~Double-close~~ ✅, ~~Concurrent writes~~ ✅ | v1.6.2 ✅, v1.6.3 ✅ |
 | `internal/constants/constants.go` | ~~Inconsistent defaults (CQ-4)~~ ✅ | v1.6.1 |
 
 ---

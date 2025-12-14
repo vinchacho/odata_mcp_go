@@ -160,3 +160,57 @@ Turn 3: BUILDER (Implement)         → Deliver with traceability
 
 - After Turn 1: "Does this Spec + Research align with your understanding?"
 - After Turn 2: "Shall I proceed with Implementation?"
+
+## Documentation Sync Requirements (MANDATORY)
+
+**All code changes MUST include corresponding documentation updates.** This ensures the codebase remains self-documenting and reduces knowledge decay.
+
+### Tier 1: Core Documentation (Update with every release)
+
+| File | Purpose | Update Trigger |
+|------|---------|----------------|
+| `CHANGELOG.md` | Version history | Every change merged |
+| `README.md` | User documentation | Features, flags, examples |
+| `SPEC.md` | Behavioral specification | API contracts, error codes |
+| `docs/ROADMAP.md` | Development roadmap | Completed/planned work |
+| `CLAUDE.md` | AI assistant guidance | Conventions, commands |
+
+### Tier 2: Feature-Specific (Update when feature changes)
+
+| File | Purpose | Update Trigger |
+|------|---------|----------------|
+| `AI_FOUNDRY_COMPATIBILITY.md` | Protocol version guide | Protocol changes |
+| `HINTS.md` | Hints system documentation | Hint format changes |
+| `QUICK_REFERENCE.md` | CLI cheat sheet | Flag additions/changes |
+| `TROUBLESHOOTING.md` | Common issues/solutions | New error patterns |
+| `SECURITY.md` | Security guidance | Auth/transport changes |
+| `RELEASING.md` | Release process | CI/CD changes |
+| `VERSIONING.md` | Version policy | Process changes |
+
+### Tier 3: Implementation Guides (Update on major refactors)
+
+| File | Purpose |
+|------|---------|
+| `docs/SAP_DATE_HANDLING.md` | SAP date conversion logic |
+| `docs/SAP_NUMERIC_HANDLING.md` | SAP numeric quirks |
+| `docs/ODATA_V4_IMPLEMENTATION.md` | v4 support details |
+| `docs/CSRF_COMPARISON.md` | CSRF handling analysis |
+
+### Configuration Files (Update when behavior changes)
+
+| File | Purpose | Update Trigger |
+|------|---------|----------------|
+| `hints.json` | Default service hints | New SAP patterns |
+| `Makefile` | Build commands | Build process changes |
+| `.github/workflows/*.yml` | CI/CD pipelines | Test/release changes |
+
+### Sync Checklist
+
+Before completing any PR or commit:
+
+1. **New CLI flag?** → Update README.md, QUICK_REFERENCE.md, SPEC.md
+2. **New feature?** → Update CHANGELOG.md, README.md, relevant guides
+3. **Bug fix?** → Update CHANGELOG.md, TROUBLESHOOTING.md if applicable
+4. **API change?** → Update SPEC.md, AI_FOUNDRY_COMPATIBILITY.md if protocol
+5. **Security change?** → Update SECURITY.md, SPEC.md
+6. **Version bump?** → Update CHANGELOG.md, README.md "What's New" section

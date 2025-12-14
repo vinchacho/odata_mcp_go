@@ -4,22 +4,31 @@ A Go implementation of the OData to Model Context Protocol (MCP) bridge, providi
 
 This is a Go port of the Python OData-MCP bridge implementation, designed to be easier to run on different operating systems with better performance and simpler deployment. It supports both OData v2 and v4 services.
 
-## 🆕 What's New (v1.5.1)
+## 🆕 What's New (v1.6.x)
 
-- **AI Foundry Compatibility**: Full support for AI Foundry's MCP client
-  - Configurable protocol version with `--protocol-version` flag
-  - Support for protocol version `2025-06-18` (AI Foundry)
-  - Maintains backward compatibility with Claude (default: `2024-11-05`)
-  - See [AI Foundry Compatibility Guide](AI_FOUNDRY_COMPATIBILITY.md) for details
+### v1.6.3 - Stability & Thread Safety
 
-- **SAP GUID Filtering** (v1.5.0): Automatic formatting of GUID values for SAP OData services
-  - Transforms `'uuid'` to `guid'uuid'` format automatically
-  - No configuration needed - automatic SAP service detection
+- **Composite Key Determinism**: Entity keys now sorted alphabetically for consistent URL generation
+- **SSE Stream Safety**: Fixed double-close panic with `sync.Once` guard
+- **Concurrent Write Protection**: ResponseWriter writes protected by mutex
+- **Context Propagation**: MCP tool handlers receive HTTP request context for proper cancellation
 
-- **Streamable HTTP Transport** (v1.5.0): Modern MCP protocol support with `--transport streamable-http`
-  - Single `/mcp` endpoint with automatic SSE upgrade
-  - Bidirectional communication and session management
-  - Better alignment with Python MCP ecosystem
+### v1.6.0-v1.6.2 - Reliability & Security
+
+- **Configurable Retry Logic**: `--max-retries` and `--retry-delay` for transient failures
+  - Exponential backoff for 5xx errors and network issues
+  - Default: 3 retries with 1s initial delay
+- **Credential Masking**: Passwords and tokens masked in verbose output
+- **Enhanced Error Messages**: Tool name and context included in MCP errors
+- **Improved Metadata Parsing**: Better handling of edge cases in v2/v4 metadata
+
+### v1.5.x - AI Foundry & SAP Enhancements
+
+- **AI Foundry Compatibility**: Configurable protocol version with `--protocol-version`
+- **SAP GUID Filtering**: Automatic `'uuid'` → `guid'uuid'` transformation
+- **Streamable HTTP Transport**: Modern MCP protocol support with `--transport streamable-http`
+
+See [CHANGELOG.md](CHANGELOG.md) for full version history.
 
 ## Features
 

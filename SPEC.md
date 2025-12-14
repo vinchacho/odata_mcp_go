@@ -1,8 +1,9 @@
 # OData MCP Bridge (Go) — Specification
 
-**Version**: 1.0
+**Version**: 1.1
 **Status**: Approved
-**Applies to**: odata-mcp binary v1.5.x
+**Applies to**: odata-mcp binary v1.6.x
+**Last Updated**: 2025-01-14
 
 ---
 
@@ -347,8 +348,21 @@ Error message includes: tool name, OData code, message, target, details.
 - Maps to MCP error code -32603
 
 ### 9.3 Retry Policy
+
 - CSRF 403: Single automatic retry with fresh token
-- No other automatic retries
+- HTTP 5xx errors: Configurable retry with exponential backoff (v1.6.0+)
+  - `--max-retries N` (default: 3, max: 10)
+  - `--retry-delay Ns` (default: 1s, min: 100ms, max: 30s)
+  - Backoff factor: 2x per retry
+- Retryable errors: 500, 502, 503, 504, connection reset, timeout
+- Non-retryable: 4xx errors (except CSRF 403)
+
+### 9.4 Credential Masking (v1.6.0+)
+
+- Passwords masked in verbose output as `***`
+- CSRF tokens truncated to first 20 characters
+- Cookie values masked in logs
+- Authorization headers redacted
 
 ---
 
@@ -398,8 +412,16 @@ Logs to stderr:
 - AI Foundry requires `2025-06-18`
 
 ### 11.7 OData v2/v4 Query Mismatches
+
 - `$inlinecount` auto-translated to `$count` for v4
 - Spaces encoded as `%20` (not `+`)
+
+### 11.8 Thread Safety (v1.6.3+)
+
+- SSE stream contexts use `sync.Once` to prevent double-close panics
+- ResponseWriter writes protected by mutex (not goroutine-safe by default)
+- Composite entity keys sorted alphabetically for deterministic URL generation
+- MCP tool handlers receive HTTP request context for proper cancellation
 
 ---
 
@@ -417,6 +439,10 @@ Logs to stderr:
 | AC-8 | `--entities "Product*"` filters tools | `--trace` output shows only matching tools |
 | AC-9 | Legacy date conversion works | Response contains ISO dates, not `/Date()/` |
 | AC-10 | `go test ./...` passes | `make test` |
+| AC-11 | Retry on 5xx errors (v1.6.0+) | `--max-retries 2` retries on 503 |
+| AC-12 | Credentials masked in logs (v1.6.0+) | `--verbose` shows `***` for passwords |
+| AC-13 | Composite keys deterministic (v1.6.3+) | Same key map always generates same URL |
+| AC-14 | SSE streams don't panic on close (v1.6.3+) | Concurrent stream cleanup doesn't crash |
 
 ---
 

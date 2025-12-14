@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"strings"
@@ -209,15 +211,22 @@ type MCPProtocolTestSuite struct {
 	suite.Suite
 	client     *MCPClient
 	serviceURL string
+	mockServer *httptest.Server
 }
 
 func (suite *MCPProtocolTestSuite) SetupSuite() {
 	// Use environment variable or mock server
 	suite.serviceURL = os.Getenv("ODATA_URL")
 	if suite.serviceURL == "" {
-		// Use the mock server from CSRF tests
-		suite.serviceURL = "http://localhost:8080/mock"
-		suite.T().Log("Using mock service URL:", suite.serviceURL)
+		suite.mockServer = newMCPMockServer(suite.T())
+		suite.serviceURL = suite.mockServer.URL
+		suite.T().Log("Using in-memory mock OData service:", suite.serviceURL)
+	}
+}
+
+func (suite *MCPProtocolTestSuite) TearDownSuite() {
+	if suite.mockServer != nil {
+		suite.mockServer.Close()
 	}
 }
 
@@ -438,12 +447,103 @@ func TestMCPProtocolTestSuite(t *testing.T) {
 	suite.Run(t, new(MCPProtocolTestSuite))
 }
 
+func newMCPMockServer(tb testing.TB) *httptest.Server {
+	tb.Helper()
+	// Keep simple in-memory data
+	type entity struct {
+		ID    string `json:"ID"`
+		Name  string `json:"Name"`
+		Value int    `json:"Value"`
+	}
+
+	entities := []entity{
+		{ID: "1", Name: "Test 1", Value: 100},
+		{ID: "2", Name: "Test 2", Value: 200},
+	}
+
+	metadata := `<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx xmlns:edmx="http://schemas.microsoft.com/ado/2007/06/edmx" Version="1.0">
+  <edmx:DataServices>
+    <Schema xmlns="http://schemas.microsoft.com/ado/2008/09/edm" Namespace="TestNamespace">
+      <EntityType Name="TestEntity">
+        <Key><PropertyRef Name="ID"/></Key>
+        <Property Name="ID" Type="Edm.String" Nullable="false"/>
+        <Property Name="Name" Type="Edm.String"/>
+        <Property Name="Value" Type="Edm.Int32"/>
+      </EntityType>
+      <EntityContainer Name="TestContainer">
+        <EntitySet Name="TestEntities" EntityType="TestNamespace.TestEntity"/>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>`
+
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tb.Logf("[MOCK SERVER] %s %s", r.Method, r.URL.String())
+
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/$metadata"):
+			w.Header().Set("Content-Type", "application/xml")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(metadata))
+			return
+		case r.URL.Path == "/" || r.URL.Path == "":
+			// Service document
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"d": map[string]interface{}{
+					"EntitySets": []string{"TestEntities"},
+				},
+			})
+			return
+		case strings.Contains(r.URL.Path, "TestEntities"):
+			switch r.Method {
+			case http.MethodGet:
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"d": map[string]interface{}{
+						"results": entities,
+					},
+				})
+			case http.MethodPost:
+				var payload entity
+				_ = json.NewDecoder(r.Body).Decode(&payload)
+				if payload.ID == "" {
+					payload.ID = fmt.Sprintf("%d", len(entities)+1)
+				}
+				entities = append(entities, payload)
+				w.WriteHeader(http.StatusCreated)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"d": payload,
+				})
+			case http.MethodPut:
+				w.WriteHeader(http.StatusOK)
+				var payload entity
+				_ = json.NewDecoder(r.Body).Decode(&payload)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"d": payload,
+				})
+			case http.MethodDelete:
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			}
+			return
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+}
+
 // MCP Protocol Audit Tests
 func TestMCPProtocolCompliance(t *testing.T) {
 	// These tests verify compliance with MCP specification
 
 	t.Run("JSONRPCVersion", func(t *testing.T) {
-		client, err := NewMCPClient(t, "http://localhost:8080/mock")
+		server := newMCPMockServer(t)
+		defer server.Close()
+
+		client, err := NewMCPClient(t, server.URL)
 		require.NoError(t, err)
 		defer client.Close()
 
@@ -491,7 +591,10 @@ func TestMCPProtocolCompliance(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkMCPRequests(b *testing.B) {
-	client, err := NewMCPClient(&testing.T{}, "http://localhost:8080/mock")
+	server := newMCPMockServer(b)
+	defer server.Close()
+
+	client, err := NewMCPClient(&testing.T{}, server.URL)
 	if err != nil {
 		b.Fatal(err)
 	}

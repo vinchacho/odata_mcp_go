@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fix double-close panic in streamable.go** - Use `sync.Once` to ensure stream done channel is closed exactly once
 - **Fix context propagation in MCP server** - Tool handlers now receive HTTP request context for proper cancellation
 - **Fix concurrent ResponseWriter writes** - Add mutex guard for SSE message writes and ping keepalives
+- **Fix composite key deterministic ordering** - Sort entity key names alphabetically before building URL predicates to ensure consistent URL generation across runs
+- **Improve MCP protocol test infrastructure** - Replace unreliable mock with proper `httptest.Server` based implementation
 
 ## [1.6.0] - 2025-12-14
 
