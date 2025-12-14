@@ -13,8 +13,11 @@ This document is the single source of truth for planned improvements, active dev
 | v1.6.0 | ✅ Complete | Foundation (Credential Masking, Retry) |
 | v1.6.1 | ✅ Complete | Quick Wins (Code Quality) |
 | v1.6.2 | Pending | Test Coverage |
+| v1.6.3 | Planned | Reliability & DX Quick Fixes |
+| v1.6.4 | Planned | Feature Polish |
 | v1.7.0 | Planned | Token-Optimized Discovery |
 | v1.8.0 | Planned | Skill Generator |
+| v1.9.0 | Planned | Advanced Features |
 
 ---
 
@@ -346,11 +349,9 @@ See [SOLMAN_HUB_ARCHITECTURE.md](SOLMAN_HUB_ARCHITECTURE.md) for the broader Sol
 
 ---
 
-## Backlog
+### v1.6.3 — Reliability & DX Quick Fixes (Planned)
 
-Items not yet scheduled for a specific version.
-
-### Reliability
+**Theme**: Low-effort reliability and developer experience improvements
 
 #### RL-2: Fix Dropped SSE Messages
 
@@ -367,6 +368,14 @@ default:
 }
 
 // Target: Log and count dropped messages
+select {
+case client.events <- data:
+default:
+    if c.verbose {
+        fmt.Fprintf(os.Stderr, "[SSE] Dropped message for client %s: buffer full\n", client.id)
+    }
+    atomic.AddInt64(&c.droppedMessages, 1)
+}
 ```
 
 ---
@@ -384,7 +393,38 @@ Current: Hardcoded 30s timeout.
 
 ---
 
-### Features
+#### DX-1: Add Linting Configuration
+
+**Effort**: 1 hour | **Risk**: Low
+
+Add `.golangci.yml` with sensible defaults and `make lint` target.
+
+```yaml
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gofmt
+    - goimports
+```
+
+---
+
+#### v1.6.3 Milestone Checklist
+
+- [ ] RL-2: Fix dropped SSE messages with logging
+- [ ] RL-3: Add `--http-timeout` and `--metadata-timeout` flags
+- [ ] DX-1: Add `.golangci.yml` and `make lint` target
+
+---
+
+### v1.6.4 — Feature Polish (Planned)
+
+**Theme**: User-facing feature improvements
 
 #### FE-1: Pretty-Print Output
 
@@ -394,20 +434,6 @@ TODO at `main.go:568`: Implement pretty printing like the Python version.
 
 ```
 --format string    Output format: json (default), pretty, csv
-```
-
----
-
-#### FE-2: Metadata Caching
-
-**Effort**: 3-4 hours | **Risk**: Medium
-
-Large metadata files (SAP services) can take 5-10 seconds to parse. Caching improves startup time.
-
-```
---cache-metadata           Enable metadata caching (default: false)
---metadata-cache-ttl       Cache TTL (default: 1h)
---metadata-cache-dir       Cache directory (default: ~/.odata-mcp/cache)
 ```
 
 ---
@@ -423,8 +449,6 @@ Add patterns for:
 
 ---
 
-### Performance
-
 #### PF-1: Connection Pooling Configuration
 
 **Effort**: 1 hour | **Risk**: Low
@@ -439,13 +463,31 @@ Expose HTTP transport settings:
 
 ---
 
-### Developer Experience
+#### v1.6.4 Milestone Checklist
 
-#### DX-1: Add Linting Configuration
+- [ ] FE-1: Implement `--format` flag (json, pretty, csv)
+- [ ] FE-3: Add Microsoft Dataverse, D365 BC, SuccessFactors hints
+- [ ] PF-1: Add connection pooling CLI flags
 
-**Effort**: 1 hour | **Risk**: Low
+---
 
-Add `.golangci.yml` with sensible defaults and `make lint` target.
+### v1.9.0 — Advanced Features (Planned)
+
+**Theme**: Complex features requiring more architectural work
+
+#### FE-2: Metadata Caching
+
+**Effort**: 3-4 hours | **Risk**: Medium
+
+Large metadata files (SAP services) can take 5-10 seconds to parse. Caching improves startup time.
+
+```
+--cache-metadata           Enable metadata caching (default: false)
+--metadata-cache-ttl       Cache TTL (default: 1h)
+--metadata-cache-dir       Cache directory (default: ~/.odata-mcp/cache)
+```
+
+**Cache Key**: SHA256 of (ServiceURL + credentials hash)
 
 ---
 
@@ -456,6 +498,27 @@ Add `.golangci.yml` with sensible defaults and `make lint` target.
 Current: Mix of `fmt.Fprintf(os.Stderr, ...)` and `fmt.Printf(...)`.
 
 Target: Consistent logger abstraction with ERROR, VERBOSE, TRACE levels.
+
+```go
+// internal/logger/logger.go
+type Logger struct {
+    verbose bool
+    writer  io.Writer
+}
+
+func (l *Logger) Verbose(format string, args ...interface{}) {
+    if l.verbose {
+        fmt.Fprintf(l.writer, "[VERBOSE] "+format+"\n", args...)
+    }
+}
+```
+
+---
+
+#### v1.9.0 Milestone Checklist
+
+- [ ] FE-2: Implement metadata caching with TTL
+- [ ] DX-2: Create logger abstraction, migrate all logging
 
 ---
 
@@ -503,19 +566,19 @@ Historical record of completed work.
 
 ## Appendix: File Index
 
-Key files and their improvement opportunities:
+Key files and their scheduled improvements:
 
-| File | Issues |
-|------|--------|
-| `cmd/odata-mcp/main.go` | TODO (pretty print - FE-1) |
-| `internal/bridge/bridge.go` | 0% handler test coverage (TC-3) |
-| `internal/client/client.go` | — |
-| `internal/mcp/server.go` | ~~Deprecated import (CQ-1)~~ ✅ Fixed |
-| `internal/config/config.go` | 0% test coverage (TC-1) |
-| `internal/hint/hint.go` | 0% test coverage (TC-2) |
-| `internal/debug/trace.go` | ~~Swallowed error (CQ-2)~~ ✅ Fixed |
-| `internal/transport/http/sse.go` | Dropped messages (RL-2), 0% coverage (TC-5) |
-| `internal/constants/constants.go` | ~~Inconsistent defaults (CQ-4)~~ ✅ Fixed |
+| File | Issues | Target |
+|------|--------|--------|
+| `cmd/odata-mcp/main.go` | Pretty print (FE-1) | v1.6.4 |
+| `internal/bridge/bridge.go` | Handler test coverage (TC-3) | v1.6.2 |
+| `internal/client/client.go` | HTTP timeout (RL-3) | v1.6.3 |
+| `internal/mcp/server.go` | ~~Deprecated import (CQ-1)~~ ✅ | v1.6.1 |
+| `internal/config/config.go` | Test coverage (TC-1) | v1.6.2 |
+| `internal/hint/hint.go` | Test coverage (TC-2), new hints (FE-3) | v1.6.2, v1.6.4 |
+| `internal/debug/trace.go` | ~~Swallowed error (CQ-2)~~ ✅ | v1.6.1 |
+| `internal/transport/http/sse.go` | Dropped messages (RL-2), tests (TC-5) | v1.6.3, v1.6.2 |
+| `internal/constants/constants.go` | ~~Inconsistent defaults (CQ-4)~~ ✅ | v1.6.1 |
 
 ---
 
