@@ -11,7 +11,7 @@ This document is the single source of truth for planned improvements, active dev
 | Version | Status | Theme |
 |---------|--------|-------|
 | v1.6.0 | ✅ Complete | Foundation (Credential Masking, Retry) |
-| v1.6.1 | Pending | Quick Wins (Code Quality) |
+| v1.6.1 | ✅ Complete | Quick Wins (Code Quality) |
 | v1.6.2 | Pending | Test Coverage |
 | v1.7.0 | Planned | Token-Optimized Discovery |
 | v1.8.0 | Planned | Skill Generator |
@@ -63,7 +63,7 @@ Retries transient failures with jitter to prevent thundering herd.
 
 ---
 
-### v1.6.1 — Quick Wins (Pending)
+### v1.6.1 — Quick Wins ✅ COMPLETE
 
 **Theme**: Low-effort code quality fixes
 
@@ -128,10 +128,10 @@ Align `constants.go` defaults with CLI defaults:
 
 #### Milestone Checklist
 
-- [ ] CQ-1: Replace `io/ioutil` with `io`
-- [ ] CQ-2: Handle JSON marshal error in trace.go
-- [ ] CQ-3: Handle body read error in CSRF path
-- [ ] CQ-4: Align constant defaults
+- [x] CQ-1: Replace `io/ioutil` with `io`
+- [x] CQ-2: Handle JSON marshal error in trace.go
+- [x] CQ-3: Handle body read error in CSRF path (already fixed)
+- [x] CQ-4: Align constant defaults
 
 ---
 

@@ -67,7 +67,11 @@ func (t *TraceLogger) Log(level, message string, data interface{}) {
 		entry["data"] = data
 	}
 
-	jsonData, _ := json.Marshal(entry)
+	jsonData, err := json.Marshal(entry)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[TRACE ERROR] Failed to marshal entry: %v\n", err)
+		return
+	}
 	fmt.Fprintf(t.file, "%s\n", jsonData)
 	t.file.Sync() // Force write to disk
 }

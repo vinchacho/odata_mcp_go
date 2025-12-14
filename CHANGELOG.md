@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Replace deprecated `io/ioutil` with `io` in MCP server (Go 1.16+)
+- Handle JSON marshal error in trace logging instead of swallowing it
+- Align constant defaults (`DefaultMaxResponseSize`: 5MB, `DefaultMaxItems`: 100) with CLI defaults
+
+## [1.6.0] - 2025-12-14
+
 ### Added
 - **Credential masking in verbose output** (security enhancement)
   - Passwords completely masked as `***`

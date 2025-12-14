@@ -151,9 +151,9 @@ const (
 // Default values
 const (
 	DefaultUserAgent         = "OData-MCP-Bridge/1.0 (Go)"
-	DefaultTimeout           = 30               // seconds
-	DefaultMaxResponseSize   = 10 * 1024 * 1024 // 10MB
-	DefaultMaxItems          = 1000
+	DefaultTimeout           = 30              // seconds
+	DefaultMaxResponseSize   = 5 * 1024 * 1024 // 5MB (aligned with CLI default)
+	DefaultMaxItems          = 100             // Aligned with CLI default
 	DefaultToolNameMaxLength = 64
 )
 
