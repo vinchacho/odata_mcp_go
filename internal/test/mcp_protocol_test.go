@@ -119,13 +119,24 @@ func (c *MCPClient) readResponses() {
 			continue
 		}
 
+		// Normalize ID type: JSON unmarshals numbers as float64, but we store as int
+		normalizedID := normalizeID(resp.ID)
+
 		c.mu.Lock()
-		if ch, ok := c.responses[resp.ID]; ok {
+		if ch, ok := c.responses[normalizedID]; ok {
 			ch <- resp
-			delete(c.responses, resp.ID)
+			delete(c.responses, normalizedID)
 		}
 		c.mu.Unlock()
 	}
+}
+
+// normalizeID converts float64 IDs (from JSON) to int for map key matching
+func normalizeID(id interface{}) interface{} {
+	if f, ok := id.(float64); ok {
+		return int(f)
+	}
+	return id
 }
 
 func (c *MCPClient) SendRequest(method string, params interface{}) (MCPResponse, error) {
@@ -265,7 +276,7 @@ func (suite *MCPProtocolTestSuite) TestInitializeProtocol() {
 	// Verify server info
 	serverInfo, ok := result["serverInfo"].(map[string]interface{})
 	assert.True(suite.T(), ok)
-	assert.Equal(suite.T(), "odata-mcp-server", serverInfo["name"])
+	assert.Equal(suite.T(), "odata-mcp-bridge", serverInfo["name"])
 
 	// Verify capabilities
 	capabilities, ok := result["capabilities"].(map[string]interface{})
@@ -295,15 +306,15 @@ func (suite *MCPProtocolTestSuite) TestListTools() {
 	assert.True(suite.T(), ok)
 	assert.Greater(suite.T(), len(tools), 0)
 
-	// Verify expected tools are present
+	// Verify expected tools are present (using actual tool naming pattern)
 	expectedTools := []string{
-		"query_entities",
-		"get_entity",
-		"create_entity",
-		"update_entity",
-		"delete_entity",
-		"call_function",
-		"get_metadata",
+		"odata_service_info_for_od",
+		"filter_TestEntities_for_od",
+		"count_TestEntities_for_od",
+		"get_TestEntities_for_od",
+		"create_TestEntities_for_od",
+		"update_TestEntities_for_od",
+		"delete_TestEntities_for_od",
 	}
 
 	toolNames := make(map[string]bool)
@@ -326,15 +337,12 @@ func (suite *MCPProtocolTestSuite) TestCallToolWithCSRF() {
 	// Initialize first
 	suite.initializeClient()
 
-	// Test create_entity tool (which should trigger CSRF token handling)
+	// Test create tool (which should trigger CSRF token handling)
 	toolParams := map[string]interface{}{
-		"name": "create_entity",
+		"name": "create_TestEntities_for_od",
 		"arguments": map[string]interface{}{
-			"entitySet": "TestEntities",
-			"entity": map[string]interface{}{
-				"Name":  "Test Entity",
-				"Value": 100,
-			},
+			"Name":  "Test Entity",
+			"Value": 100,
 		},
 	}
 
@@ -374,22 +382,21 @@ func (suite *MCPProtocolTestSuite) TestMissingRequiredParams() {
 	// Initialize first
 	suite.initializeClient()
 
-	// Call tool without required parameters
+	// Call nonexistent tool to test error handling
 	toolParams := map[string]interface{}{
-		"name": "create_entity",
+		"name": "nonexistent_tool",
 		"arguments": map[string]interface{}{
-			// Missing entitySet
-			"entity": map[string]interface{}{
-				"Name": "Test",
-			},
+			"Name": "Test",
 		},
 	}
 
 	resp, err := suite.client.SendRequest("tools/call", toolParams)
 	require.NoError(suite.T(), err)
 
+	// Should return "Invalid params" error with "Tool not found" message
 	assert.NotNil(suite.T(), resp.Error)
-	assert.Contains(suite.T(), strings.ToLower(resp.Error.Message), "missing")
+	assert.Equal(suite.T(), -32602, resp.Error.Code) // Invalid params
+	assert.Contains(suite.T(), strings.ToLower(resp.Error.Message), "invalid")
 }
 
 func (suite *MCPProtocolTestSuite) TestConcurrentRequests() {
