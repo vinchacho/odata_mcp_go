@@ -636,6 +636,10 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `--verbose-errors` | Provide detailed error context | `false` |
 | `--claude-code-friendly, -c` | Remove $ prefix from OData parameters for Claude Code CLI compatibility | `false` |
 | `--protocol-version` | Override MCP protocol version (e.g., '2025-06-18' for AI Foundry) | `2024-11-05` |
+| `--retry-max-attempts` | Maximum retry attempts for failed requests | `3` |
+| `--retry-initial-backoff-ms` | Initial backoff delay in milliseconds | `100` |
+| `--retry-max-backoff-ms` | Maximum backoff delay in milliseconds | `10000` |
+| `--retry-backoff-multiplier` | Backoff multiplier for exponential increase | `2.0` |
 
 ### Environment Variables
 
@@ -646,6 +650,10 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `ODATA_PASSWORD` or `ODATA_PASS` | Password for basic auth |
 | `ODATA_COOKIE_FILE` | Path to cookie file |
 | `ODATA_COOKIE_STRING` | Cookie string |
+| `ODATA_RETRY_MAX_ATTEMPTS` | Maximum retry attempts for failed requests |
+| `ODATA_RETRY_INITIAL_BACKOFF_MS` | Initial backoff delay in milliseconds |
+| `ODATA_RETRY_MAX_BACKOFF_MS` | Maximum backoff delay in milliseconds |
+| `ODATA_RETRY_BACKOFF_MULTIPLIER` | Backoff multiplier for exponential increase |
 
 ### .env File Support
 

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/zmcp/odata-mcp/internal/constants"
+	"github.com/zmcp/odata-mcp/internal/debug"
 	"github.com/zmcp/odata-mcp/internal/metadata"
 	"github.com/zmcp/odata-mcp/internal/models"
 )
@@ -28,6 +29,7 @@ type ODataClient struct {
 	verbose        bool
 	sessionCookies []*http.Cookie // Track session cookies from server
 	isV4           bool           // Whether the service is OData v4
+	retryConfig    *RetryConfig   // Retry configuration for failed requests
 }
 
 // encodeQueryParams encodes URL query parameters with proper space encoding
@@ -50,8 +52,9 @@ func NewODataClient(baseURL string, verbose bool) *ODataClient {
 		httpClient: &http.Client{
 			Timeout: time.Duration(constants.DefaultTimeout) * time.Second,
 		},
-		verbose: verbose,
-		isV4:    false, // Will be determined when fetching metadata
+		verbose:     verbose,
+		isV4:        false,                // Will be determined when fetching metadata
+		retryConfig: DefaultRetryConfig(), // Use default retry configuration
 	}
 }
 
@@ -64,6 +67,26 @@ func (c *ODataClient) SetBasicAuth(username, password string) {
 // SetCookies configures cookie authentication
 func (c *ODataClient) SetCookies(cookies map[string]string) {
 	c.cookies = cookies
+}
+
+// SetRetryConfig configures retry behavior for failed requests
+func (c *ODataClient) SetRetryConfig(cfg *RetryConfig) {
+	if cfg != nil {
+		c.retryConfig = cfg
+	}
+}
+
+// ConfigureRetry configures retry behavior from individual parameters
+// This is a convenience method for setting retry config from CLI flags
+func (c *ODataClient) ConfigureRetry(maxAttempts, initialBackoffMs, maxBackoffMs int, backoffMultiplier float64) {
+	c.retryConfig = &RetryConfig{
+		MaxRetries:        maxAttempts,
+		InitialBackoff:    time.Duration(initialBackoffMs) * time.Millisecond,
+		MaxBackoff:        time.Duration(maxBackoffMs) * time.Millisecond,
+		BackoffMultiplier: backoffMultiplier,
+		JitterFraction:    0.1, // Default jitter
+		RetryableStatuses: []int{429, 500, 502, 503, 504},
+	}
 }
 
 // buildRequest creates an HTTP request with proper headers and authentication
@@ -105,19 +128,14 @@ func (c *ODataClient) buildRequest(ctx context.Context, method, endpoint string,
 	if c.csrfToken != "" {
 		req.Header.Set(constants.CSRFTokenHeader, c.csrfToken)
 		if c.verbose {
-			// Show first 20 chars of token like Python does
-			tokenPreview := c.csrfToken
-			if len(tokenPreview) > 20 {
-				tokenPreview = tokenPreview[:20] + "..."
-			}
-			fmt.Fprintf(os.Stderr, "[VERBOSE] Adding CSRF token to request: %s\n", tokenPreview)
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Adding CSRF token to request: %s\n", debug.MaskToken(c.csrfToken))
 		}
 	}
 
 	return req, nil
 }
 
-// doRequest executes an HTTP request and handles common errors
+// doRequest executes an HTTP request with retry and CSRF handling
 func (c *ODataClient) doRequest(req *http.Request) (*http.Response, error) {
 	// For requests with body, we need to save it for potential retry
 	var bodyBytes []byte
@@ -130,27 +148,17 @@ func (c *ODataClient) doRequest(req *http.Request) (*http.Response, error) {
 		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
 
-	return c.doRequestWithRetry(req, bodyBytes, false)
+	return c.doRequestWithRetry(req, bodyBytes)
 }
 
-// doRequestWithRetry executes an HTTP request with CSRF retry logic
-func (c *ODataClient) doRequestWithRetry(req *http.Request, bodyBytes []byte, isRetry bool) (*http.Response, error) {
-	if c.verbose {
-		fmt.Fprintf(os.Stderr, "[VERBOSE] %s %s\n", req.Method, req.URL.String())
-	}
+// doRequestWithRetry executes an HTTP request with exponential backoff retry and CSRF handling
+func (c *ODataClient) doRequestWithRetry(req *http.Request, bodyBytes []byte) (*http.Response, error) {
+	var lastErr error
+	var lastResp *http.Response
+	var lastBody []byte
+	csrfRetried := false
 
-	// Reset body if we have it (for retry scenarios)
-	if bodyBytes != nil && len(bodyBytes) > 0 {
-		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		req.ContentLength = int64(len(bodyBytes))
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("HTTP request failed: %w", err)
-	}
-
-	// Check if this is a modifying operation
+	// Check if this is a modifying operation (for CSRF handling)
 	modifyingMethods := []string{"POST", "PUT", "MERGE", "PATCH", "DELETE"}
 	isModifying := false
 	for _, m := range modifyingMethods {
@@ -160,44 +168,96 @@ func (c *ODataClient) doRequestWithRetry(req *http.Request, bodyBytes []byte, is
 		}
 	}
 
-	// Handle CSRF token validation failure (Python-style)
-	if resp.StatusCode == http.StatusForbidden && isModifying && !isRetry {
-		// Read response body to check for CSRF-related errors
-		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		bodyStr := string(body)
-
-		csrfFailed := strings.Contains(bodyStr, "CSRF token validation failed") ||
-			strings.Contains(strings.ToLower(bodyStr), "csrf") ||
-			strings.EqualFold(resp.Header.Get("x-csrf-token"), "required")
-
-		if csrfFailed {
+	for attempt := 0; attempt <= c.retryConfig.MaxRetries; attempt++ {
+		// Wait before retry (skip first attempt)
+		if attempt > 0 {
+			backoff := c.retryConfig.CalculateBackoff(attempt - 1)
 			if c.verbose {
-				fmt.Fprintf(os.Stderr, "[VERBOSE] CSRF token validation failed, attempting to refetch...\n")
+				fmt.Fprintf(os.Stderr, "[VERBOSE] Retry attempt %d/%d after %v\n",
+					attempt, c.retryConfig.MaxRetries, backoff)
 			}
-
-			// Clear the invalid token
-			c.csrfToken = ""
-
-			// Try to fetch new CSRF token
-			if err := c.fetchCSRFToken(req.Context()); err != nil {
-				// Return original error with CSRF context
-				return nil, fmt.Errorf("CSRF token required but refetch failed. Status: %d. Response: %s", resp.StatusCode, bodyStr)
+			select {
+			case <-req.Context().Done():
+				return nil, req.Context().Err()
+			case <-time.After(backoff):
 			}
-
-			// Retry original request with new CSRF token
-			req.Header.Set(constants.CSRFTokenHeader, c.csrfToken)
-			if c.verbose {
-				fmt.Fprintf(os.Stderr, "[VERBOSE] Retrying request with new CSRF token...\n")
-			}
-			return c.doRequestWithRetry(req, bodyBytes, true)
 		}
 
-		// Not a CSRF error, recreate response with body
-		resp.Body = io.NopCloser(bytes.NewReader(body))
+		// Reset body if we have it (for retry scenarios)
+		if bodyBytes != nil && len(bodyBytes) > 0 {
+			req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+			req.ContentLength = int64(len(bodyBytes))
+		}
+
+		if c.verbose && attempt == 0 {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] %s %s\n", req.Method, debug.MaskURL(req.URL.String()))
+		}
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("HTTP request failed: %w", err)
+			if c.verbose {
+				fmt.Fprintf(os.Stderr, "[VERBOSE] Request failed: %v\n", err)
+			}
+			continue // Network error, retry
+		}
+
+		// Read response body for analysis
+		respBody, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if readErr != nil {
+			lastErr = fmt.Errorf("failed to read response body: %w", readErr)
+			continue
+		}
+
+		lastResp = resp
+		lastBody = respBody
+
+		// Check for CSRF failure (special handling, doesn't count toward retries)
+		if resp.StatusCode == http.StatusForbidden && isModifying && !csrfRetried {
+			if IsCSRFFailure(resp, respBody) {
+				if c.verbose {
+					fmt.Fprintf(os.Stderr, "[VERBOSE] CSRF token validation failed, attempting to refetch...\n")
+				}
+
+				csrfRetried = true
+				c.csrfToken = ""
+
+				// Try to fetch new CSRF token
+				if fetchErr := c.fetchCSRFToken(req.Context()); fetchErr != nil {
+					return nil, fmt.Errorf("CSRF token required but refetch failed. Status: %d. Response: %s",
+						resp.StatusCode, string(respBody))
+				}
+
+				// Update request with new CSRF token and retry (same attempt count)
+				req.Header.Set(constants.CSRFTokenHeader, c.csrfToken)
+				if c.verbose {
+					fmt.Fprintf(os.Stderr, "[VERBOSE] Retrying request with new CSRF token...\n")
+				}
+				attempt-- // Don't count CSRF retry toward max retries
+				continue
+			}
+		}
+
+		// Check if we should retry based on status code
+		if c.retryConfig.ShouldRetry(resp.StatusCode, attempt) {
+			if c.verbose {
+				fmt.Fprintf(os.Stderr, "[VERBOSE] Received status %d, will retry\n", resp.StatusCode)
+			}
+			continue
+		}
+
+		// Success or non-retryable error - restore body and return
+		resp.Body = io.NopCloser(bytes.NewReader(respBody))
+		return resp, nil
 	}
 
-	return resp, nil
+	// All retries exhausted
+	if lastResp != nil {
+		lastResp.Body = io.NopCloser(bytes.NewReader(lastBody))
+		return lastResp, nil
+	}
+	return nil, fmt.Errorf("all %d retries failed: %w", c.retryConfig.MaxRetries, lastErr)
 }
 
 // fetchCSRFToken fetches a CSRF token from the service
@@ -218,8 +278,8 @@ func (c *ODataClient) fetchCSRFToken(ctx context.Context) error {
 	req.Header.Set(constants.CSRFTokenHeader, constants.CSRFTokenFetch)
 
 	if c.verbose {
-		fmt.Fprintf(os.Stderr, "[VERBOSE] Token fetch request: %s %s\n", req.Method, req.URL.String())
-		fmt.Fprintf(os.Stderr, "[VERBOSE] Token fetch headers: %v\n", req.Header)
+		fmt.Fprintf(os.Stderr, "[VERBOSE] Token fetch request: %s %s\n", req.Method, debug.MaskURL(req.URL.String()))
+		fmt.Fprintf(os.Stderr, "[VERBOSE] Token fetch headers: %s\n", maskHeaders(req.Header))
 	}
 
 	// Don't use doRequest here to avoid retry loops - fetch token requests shouldn't retry
@@ -235,14 +295,14 @@ func (c *ODataClient) fetchCSRFToken(ctx context.Context) error {
 		if c.verbose {
 			fmt.Fprintf(os.Stderr, "[VERBOSE] Received %d session cookies during token fetch\n", len(cookies))
 			for _, cookie := range cookies {
-				fmt.Fprintf(os.Stderr, "[VERBOSE] Cookie: %s=%s (Path=%s)\n", cookie.Name, cookie.Value[:min(len(cookie.Value), 20)]+"...", cookie.Path)
+				fmt.Fprintf(os.Stderr, "[VERBOSE] Cookie: %s=%s (Path=%s)\n", cookie.Name, debug.MaskToken(cookie.Value), cookie.Path)
 			}
 		}
 	}
 
 	if c.verbose {
 		fmt.Fprintf(os.Stderr, "[VERBOSE] Token fetch response status: %d\n", resp.StatusCode)
-		fmt.Fprintf(os.Stderr, "[VERBOSE] Token fetch response headers: %v\n", resp.Header)
+		fmt.Fprintf(os.Stderr, "[VERBOSE] Token fetch response headers: %s\n", maskHeaders(resp.Header))
 	}
 
 	// Check both possible header names (case variations)
@@ -265,7 +325,7 @@ func (c *ODataClient) fetchCSRFToken(ctx context.Context) error {
 
 	c.csrfToken = token
 	if c.verbose {
-		fmt.Fprintf(os.Stderr, "[VERBOSE] CSRF token fetched successfully: %s...\n", token[:min(len(token), 20)])
+		fmt.Fprintf(os.Stderr, "[VERBOSE] CSRF token fetched successfully: %s\n", debug.MaskToken(token))
 	}
 
 	return nil
@@ -277,6 +337,18 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// maskHeaders creates a string representation of headers with sensitive values masked
+func maskHeaders(headers http.Header) string {
+	var parts []string
+	for name, values := range headers {
+		for _, value := range values {
+			maskedValue := debug.MaskHeader(name, value)
+			parts = append(parts, fmt.Sprintf("%s: %s", name, maskedValue))
+		}
+	}
+	return strings.Join(parts, ", ")
 }
 
 // GetMetadata fetches and parses the OData service metadata

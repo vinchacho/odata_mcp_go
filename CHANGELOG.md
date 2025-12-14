@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Credential masking in verbose output** (security enhancement)
+  - Passwords completely masked as `***`
+  - CSRF tokens show only last 8 characters (`****abcd1234`)
+  - Authorization headers show type but mask credentials (`Basic ****`)
+  - URLs mask passwords in userinfo and sensitive query parameters
+  - Cookie values masked in debug output
+  - New `internal/debug/masking.go` module with reusable masking utilities
+- **Exponential backoff retry with jitter** for transient failures
+  - Configurable via CLI flags:
+    - `--retry-max-attempts` (default: 3)
+    - `--retry-initial-backoff-ms` (default: 100)
+    - `--retry-max-backoff-ms` (default: 10000)
+    - `--retry-backoff-multiplier` (default: 2.0)
+  - Environment variable support: `ODATA_RETRY_MAX_ATTEMPTS`, etc.
+  - Retryable status codes: 429 (rate limit), 500, 502, 503, 504
+  - CSRF token refresh doesn't count toward retry limit
+  - Context cancellation respected during backoff wait
+  - Random jitter (±10%) prevents thundering herd
 - **Streamable HTTP transport** (`--transport streamable-http`)
   - Modern MCP protocol support (version 2024-11-05)
   - Single `/mcp` endpoint for all operations

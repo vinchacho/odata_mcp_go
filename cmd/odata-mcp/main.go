@@ -121,11 +121,21 @@ func init() {
 	// Protocol version override (for AI Foundry compatibility)
 	rootCmd.Flags().StringVar(&cfg.ProtocolVersion, "protocol-version", "", "Override MCP protocol version (e.g., '2025-06-18' for AI Foundry)")
 
+	// Retry configuration
+	rootCmd.Flags().IntVar(&cfg.RetryMaxAttempts, "retry-max-attempts", 3, "Maximum retry attempts for failed requests (default: 3)")
+	rootCmd.Flags().IntVar(&cfg.RetryInitialBackoffMs, "retry-initial-backoff-ms", 100, "Initial backoff delay in milliseconds (default: 100)")
+	rootCmd.Flags().IntVar(&cfg.RetryMaxBackoffMs, "retry-max-backoff-ms", 10000, "Maximum backoff delay in milliseconds (default: 10000)")
+	rootCmd.Flags().Float64Var(&cfg.RetryBackoffMultiplier, "retry-backoff-multiplier", 2.0, "Backoff multiplier for exponential increase (default: 2.0)")
+
 	// Bind flags to viper for environment variable support
 	viper.BindPFlag("service", rootCmd.Flags().Lookup("service"))
 	viper.BindPFlag("username", rootCmd.Flags().Lookup("user"))
 	viper.BindPFlag("password", rootCmd.Flags().Lookup("password"))
 	viper.BindPFlag("verbose", rootCmd.Flags().Lookup("verbose"))
+	viper.BindPFlag("retry_max_attempts", rootCmd.Flags().Lookup("retry-max-attempts"))
+	viper.BindPFlag("retry_initial_backoff_ms", rootCmd.Flags().Lookup("retry-initial-backoff-ms"))
+	viper.BindPFlag("retry_max_backoff_ms", rootCmd.Flags().Lookup("retry-max-backoff-ms"))
+	viper.BindPFlag("retry_backoff_multiplier", rootCmd.Flags().Lookup("retry-backoff-multiplier"))
 
 	// Set up environment variable mapping
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
@@ -297,7 +307,7 @@ func runBridge(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "\n🚨 EXTREME SECURITY WARNING 🚨\n")
 			fmt.Fprintf(os.Stderr, "You are exposing an UNPROTECTED MCP service to the network!\n")
 			fmt.Fprintf(os.Stderr, "MCP has NO authentication mechanism - anyone can connect!\n")
-			fmt.Fprintf(os.Stderr, "This service provides full access to: %s\n", cfg.ServiceURL)
+			fmt.Fprintf(os.Stderr, "This service provides full access to: %s\n", debug.MaskURL(cfg.ServiceURL))
 			fmt.Fprintf(os.Stderr, "Address: %s\n\n", httpAddr)
 			fmt.Fprintf(os.Stderr, "Press Ctrl+C NOW if this is not intentional!\n\n")
 		}
@@ -331,7 +341,7 @@ func runBridge(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "\n🚨 EXTREME SECURITY WARNING 🚨\n")
 			fmt.Fprintf(os.Stderr, "You are exposing an UNPROTECTED MCP service to the network!\n")
 			fmt.Fprintf(os.Stderr, "MCP has NO authentication mechanism - anyone can connect!\n")
-			fmt.Fprintf(os.Stderr, "This service provides full access to: %s\n", cfg.ServiceURL)
+			fmt.Fprintf(os.Stderr, "This service provides full access to: %s\n", debug.MaskURL(cfg.ServiceURL))
 			fmt.Fprintf(os.Stderr, "Address: %s\n\n", httpAddr)
 			fmt.Fprintf(os.Stderr, "Press Ctrl+C NOW if this is not intentional!\n\n")
 		}

@@ -125,3 +125,37 @@ make help
 - Default: localhost-only binding
 - Credentials never logged
 - CSRF tokens truncated in verbose output
+
+## Development Workflow (MANDATORY)
+
+**All development MUST follow the SDD + RPI methodology.** See [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.md) for full details.
+
+### Quick Reference
+
+```text
+Turn 1: ARCHITECT (Spec + Research) → STOP for approval
+Turn 2: PLANNER (Plan only)         → STOP for approval
+Turn 3: BUILDER (Implement)         → Deliver with traceability
+```
+
+### Hard Rules
+
+1. **NO CODING** until the Implement phase (Turn 3)
+2. **STOP at gates** - always ask for approval before proceeding
+3. **Never guess** - ask for missing inputs or mark as ASSUMPTION
+4. **Every change** must map to a requirement and acceptance criterion
+5. **Include Devil's Advocate** section at each gate
+6. **Brownfield rules** - no unrelated refactors/renames/reformatting
+
+### Complexity Modes
+
+| Mode | When to Use |
+|------|-------------|
+| LITE | ≤2 files, no schema changes, minimal tests |
+| STANDARD | Multiple modules, tests required |
+| HEAVY | Cross-cutting, migrations, security/perf critical |
+
+### Gate Questions
+
+- After Turn 1: "Does this Spec + Research align with your understanding?"
+- After Turn 2: "Shall I proceed with Implementation?"

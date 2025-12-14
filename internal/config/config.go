@@ -66,6 +66,12 @@ type Config struct {
 
 	// Protocol version override (for AI Foundry compatibility)
 	ProtocolVersion string `mapstructure:"protocol_version"` // Override MCP protocol version (default: 2024-11-05)
+
+	// Retry configuration
+	RetryMaxAttempts       int     `mapstructure:"retry_max_attempts"`       // Maximum retry attempts (default: 3)
+	RetryInitialBackoffMs  int     `mapstructure:"retry_initial_backoff_ms"` // Initial backoff in milliseconds (default: 100)
+	RetryMaxBackoffMs      int     `mapstructure:"retry_max_backoff_ms"`     // Maximum backoff in milliseconds (default: 10000)
+	RetryBackoffMultiplier float64 `mapstructure:"retry_backoff_multiplier"` // Backoff multiplier (default: 2.0)
 }
 
 // HasBasicAuth returns true if username and password are configured
