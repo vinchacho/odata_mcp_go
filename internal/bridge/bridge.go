@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/zmcp/odata-mcp/internal/client"
 	"github.com/zmcp/odata-mcp/internal/config"
@@ -46,6 +47,28 @@ func NewODataMCPBridge(cfg *config.Config) (*ODataMCPBridge, error) {
 		odataClient.SetBasicAuth(cfg.Username, cfg.Password)
 	} else if cfg.HasCookieAuth() {
 		odataClient.SetCookies(cfg.Cookies)
+	}
+
+	// Apply timeout configuration
+	if cfg.HTTPTimeout > 0 {
+		odataClient.SetTimeout(time.Duration(cfg.HTTPTimeout) * time.Second)
+		if cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] HTTP timeout set to %d seconds\n", cfg.HTTPTimeout)
+		}
+	}
+
+	// Apply retry configuration (was defined but never applied - bug fix)
+	if cfg.RetryMaxAttempts > 0 {
+		odataClient.ConfigureRetry(
+			cfg.RetryMaxAttempts,
+			cfg.RetryInitialBackoffMs,
+			cfg.RetryMaxBackoffMs,
+			cfg.RetryBackoffMultiplier,
+		)
+		if cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Retry configured: max=%d, initialBackoff=%dms, maxBackoff=%dms, multiplier=%.1f\n",
+				cfg.RetryMaxAttempts, cfg.RetryInitialBackoffMs, cfg.RetryMaxBackoffMs, cfg.RetryBackoffMultiplier)
+		}
 	}
 
 	// Create MCP server
@@ -98,6 +121,14 @@ func NewODataMCPBridge(cfg *config.Config) (*ODataMCPBridge, error) {
 // initialize loads metadata and generates tools
 func (b *ODataMCPBridge) initialize() error {
 	ctx := context.Background()
+
+	// Apply metadata timeout temporarily (metadata can be large for SAP services)
+	metadataTimeout := constants.DefaultMetadataTimeout
+	if b.config.MetadataTimeout > 0 {
+		metadataTimeout = b.config.MetadataTimeout
+	}
+	restore := b.client.SetMetadataTimeout(time.Duration(metadataTimeout) * time.Second)
+	defer restore()
 
 	// Fetch metadata
 	metadata, err := b.client.GetMetadata(ctx)

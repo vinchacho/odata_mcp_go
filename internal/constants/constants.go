@@ -152,6 +152,7 @@ const (
 const (
 	DefaultUserAgent         = "OData-MCP-Bridge/1.0 (Go)"
 	DefaultTimeout           = 30              // seconds
+	DefaultMetadataTimeout   = 60              // seconds - metadata can be large for SAP services
 	DefaultMaxResponseSize   = 5 * 1024 * 1024 // 5MB (aligned with CLI default)
 	DefaultMaxItems          = 100             // Aligned with CLI default
 	DefaultToolNameMaxLength = 64

@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/zmcp/odata-mcp/internal/transport"
@@ -14,12 +16,14 @@ import (
 
 // SSETransport implements the Transport interface for Server-Sent Events
 type SSETransport struct {
-	addr     string
-	server   *http.Server
-	handler  transport.Handler
-	clients  map[string]*sseClient
-	mu       sync.RWMutex
-	messages chan *clientMessage
+	addr            string
+	server          *http.Server
+	handler         transport.Handler
+	clients         map[string]*sseClient
+	mu              sync.RWMutex
+	messages        chan *clientMessage
+	droppedMessages int64 // Atomic counter for dropped messages
+	verbose         bool  // Enable verbose logging for dropped messages
 }
 
 type sseClient struct {
@@ -43,6 +47,16 @@ func NewSSE(addr string, handler transport.Handler) *SSETransport {
 		clients:  make(map[string]*sseClient),
 		messages: make(chan *clientMessage, 100),
 	}
+}
+
+// SetVerbose enables verbose logging for dropped messages
+func (t *SSETransport) SetVerbose(verbose bool) {
+	t.verbose = verbose
+}
+
+// GetDroppedMessageCount returns the number of dropped messages
+func (t *SSETransport) GetDroppedMessageCount() int64 {
+	return atomic.LoadInt64(&t.droppedMessages)
 }
 
 // Start initializes the HTTP server and begins listening
@@ -213,7 +227,12 @@ func (t *SSETransport) processMessages(ctx context.Context) {
 					select {
 					case client.events <- data:
 					default:
-						// Client buffer full, skip
+						// Client buffer full - log and count dropped message
+						dropped := atomic.AddInt64(&t.droppedMessages, 1)
+						if t.verbose {
+							fmt.Fprintf(os.Stderr, "[SSE] Dropped response for client %s: buffer full (total dropped: %d)\n",
+								cm.clientID, dropped)
+						}
 					}
 				}
 			}
@@ -232,7 +251,12 @@ func (t *SSETransport) sendEvent(client *sseClient, eventType string, data inter
 		select {
 		case client.events <- eventData:
 		default:
-			// Buffer full, skip
+			// Buffer full - log and count dropped event
+			dropped := atomic.AddInt64(&t.droppedMessages, 1)
+			if t.verbose {
+				fmt.Fprintf(os.Stderr, "[SSE] Dropped %s event for client %s: buffer full (total dropped: %d)\n",
+					eventType, client.id, dropped)
+			}
 		}
 	}
 }
@@ -247,11 +271,16 @@ func (t *SSETransport) BroadcastMessage(msg *transport.Message) error {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	for _, client := range t.clients {
+	for clientID, client := range t.clients {
 		select {
 		case client.events <- data:
 		default:
-			// Client buffer full, skip
+			// Client buffer full - log and count dropped broadcast
+			dropped := atomic.AddInt64(&t.droppedMessages, 1)
+			if t.verbose {
+				fmt.Fprintf(os.Stderr, "[SSE] Dropped broadcast for client %s: buffer full (total dropped: %d)\n",
+					clientID, dropped)
+			}
 		}
 	}
 

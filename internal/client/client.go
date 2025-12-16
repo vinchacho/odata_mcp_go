@@ -94,6 +94,19 @@ func (c *ODataClient) ConfigureRetry(maxAttempts, initialBackoffMs, maxBackoffMs
 	}
 }
 
+// SetTimeout sets the HTTP client timeout for all requests
+func (c *ODataClient) SetTimeout(timeout time.Duration) {
+	c.httpClient.Timeout = timeout
+}
+
+// SetMetadataTimeout temporarily sets a longer timeout for metadata operations
+// Returns a function to restore the original timeout
+func (c *ODataClient) SetMetadataTimeout(timeout time.Duration) func() {
+	original := c.httpClient.Timeout
+	c.httpClient.Timeout = timeout
+	return func() { c.httpClient.Timeout = original }
+}
+
 // buildRequest creates an HTTP request with proper headers and authentication
 func (c *ODataClient) buildRequest(ctx context.Context, method, endpoint string, body io.Reader) (*http.Request, error) {
 	fullURL := c.baseURL + strings.TrimPrefix(endpoint, "/")

@@ -649,6 +649,8 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `--retry-initial-backoff-ms` | Initial backoff delay in milliseconds | `100` |
 | `--retry-max-backoff-ms` | Maximum backoff delay in milliseconds | `10000` |
 | `--retry-backoff-multiplier` | Backoff multiplier for exponential increase | `2.0` |
+| `--http-timeout` | HTTP request timeout in seconds | `30` |
+| `--metadata-timeout` | Metadata fetch timeout in seconds (useful for large SAP services) | `60` |
 
 ### Environment Variables
 
@@ -663,6 +665,8 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `ODATA_RETRY_INITIAL_BACKOFF_MS` | Initial backoff delay in milliseconds |
 | `ODATA_RETRY_MAX_BACKOFF_MS` | Maximum backoff delay in milliseconds |
 | `ODATA_RETRY_BACKOFF_MULTIPLIER` | Backoff multiplier for exponential increase |
+| `ODATA_HTTP_TIMEOUT` | HTTP request timeout in seconds |
+| `ODATA_METADATA_TIMEOUT` | Metadata fetch timeout in seconds |
 
 ### .env File Support
 

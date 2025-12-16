@@ -72,6 +72,10 @@ type Config struct {
 	RetryInitialBackoffMs  int     `mapstructure:"retry_initial_backoff_ms"` // Initial backoff in milliseconds (default: 100)
 	RetryMaxBackoffMs      int     `mapstructure:"retry_max_backoff_ms"`     // Maximum backoff in milliseconds (default: 10000)
 	RetryBackoffMultiplier float64 `mapstructure:"retry_backoff_multiplier"` // Backoff multiplier (default: 2.0)
+
+	// Timeout configuration
+	HTTPTimeout     int `mapstructure:"http_timeout"`     // HTTP request timeout in seconds (default: 30)
+	MetadataTimeout int `mapstructure:"metadata_timeout"` // Metadata fetch timeout in seconds (default: 60)
 }
 
 // HasBasicAuth returns true if username and password are configured

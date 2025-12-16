@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.5] - 2025-12-17
+
+### Added
+
+- **HTTP timeout configuration** - New CLI flags for timeout control:
+  - `--http-timeout` - HTTP request timeout in seconds (default: 30)
+  - `--metadata-timeout` - Metadata fetch timeout in seconds (default: 60, useful for large SAP services)
+  - Environment variable support: `ODATA_HTTP_TIMEOUT`, `ODATA_METADATA_TIMEOUT`
+- **SSE dropped message logging** - When `--verbose` is enabled, SSE transport now logs when messages are dropped due to full client buffers
+- **SSE dropped message counter** - Internal atomic counter tracks total dropped messages for observability
+- **Linting configuration** - Added `.golangci.yml` with conservative linters (errcheck, govet, staticcheck, unused)
+
+### Fixed
+
+- **Retry configuration was never applied** - The `--retry-*` CLI flags were defined but never wired to the HTTP client. Now properly applied during bridge initialization.
+
+## [1.6.3] - 2025-12-16
+
 ### Fixed
 
 - Replace deprecated `io/ioutil` with `io` in MCP server (Go 1.16+)

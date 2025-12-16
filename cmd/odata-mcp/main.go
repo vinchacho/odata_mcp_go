@@ -127,6 +127,10 @@ func init() {
 	rootCmd.Flags().IntVar(&cfg.RetryMaxBackoffMs, "retry-max-backoff-ms", 10000, "Maximum backoff delay in milliseconds (default: 10000)")
 	rootCmd.Flags().Float64Var(&cfg.RetryBackoffMultiplier, "retry-backoff-multiplier", 2.0, "Backoff multiplier for exponential increase (default: 2.0)")
 
+	// Timeout configuration
+	rootCmd.Flags().IntVar(&cfg.HTTPTimeout, "http-timeout", 30, "HTTP request timeout in seconds (default: 30)")
+	rootCmd.Flags().IntVar(&cfg.MetadataTimeout, "metadata-timeout", 60, "Metadata fetch timeout in seconds (default: 60)")
+
 	// Bind flags to viper for environment variable support
 	viper.BindPFlag("service", rootCmd.Flags().Lookup("service"))
 	viper.BindPFlag("username", rootCmd.Flags().Lookup("user"))
@@ -136,6 +140,8 @@ func init() {
 	viper.BindPFlag("retry_initial_backoff_ms", rootCmd.Flags().Lookup("retry-initial-backoff-ms"))
 	viper.BindPFlag("retry_max_backoff_ms", rootCmd.Flags().Lookup("retry-max-backoff-ms"))
 	viper.BindPFlag("retry_backoff_multiplier", rootCmd.Flags().Lookup("retry-backoff-multiplier"))
+	viper.BindPFlag("http_timeout", rootCmd.Flags().Lookup("http-timeout"))
+	viper.BindPFlag("metadata_timeout", rootCmd.Flags().Lookup("metadata-timeout"))
 
 	// Set up environment variable mapping
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
@@ -349,7 +355,9 @@ func runBridge(cmd *cobra.Command, args []string) error {
 		if cfg.Verbose {
 			fmt.Fprintf(os.Stderr, "[VERBOSE] Starting HTTP/SSE transport on %s\n", httpAddr)
 		}
-		trans = http.NewSSE(httpAddr, handler)
+		sseTrans := http.NewSSE(httpAddr, handler)
+		sseTrans.SetVerbose(cfg.Verbose)
+		trans = sseTrans
 	case "stdio":
 		fallthrough
 	default:

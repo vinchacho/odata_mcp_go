@@ -14,9 +14,9 @@ This document is the single source of truth for planned improvements, active dev
 | v1.6.1 | ✅ Complete | Quick Wins (Code Quality) |
 | v1.6.2 | ✅ Complete | Critical Bug Fixes (Concurrency, Parser, SSE) |
 | v1.6.3 | ✅ Complete | Stability & Thread Safety |
-| v1.6.4 | Next | Test Coverage |
-| v1.6.5 | Planned | Reliability & DX Quick Fixes |
-| v1.6.6 | Planned | Feature Polish |
+| v1.6.4 | Parked | Test Coverage |
+| v1.6.5 | ✅ Complete | Reliability & DX Quick Fixes |
+| v1.6.6 | Next | Feature Polish |
 | v1.7.0 | Planned | Token-Optimized Discovery |
 | v1.8.0 | Planned | Skill Generator |
 | v1.9.0 | Planned | Advanced Features |
@@ -447,7 +447,7 @@ See [SOLMAN_HUB_ARCHITECTURE.md](SOLMAN_HUB_ARCHITECTURE.md) for the broader Sol
 
 ---
 
-### v1.6.4 — Reliability & DX Quick Fixes (Planned)
+### v1.6.5 — Reliability & DX Quick Fixes ✅ COMPLETE
 
 **Theme**: Low-effort reliability and developer experience improvements
 
@@ -512,15 +512,16 @@ linters:
 
 ---
 
-#### v1.6.4 Milestone Checklist
+#### v1.6.5 Milestone Checklist
 
-- [ ] RL-2: Fix dropped SSE messages with logging
-- [ ] RL-3: Add `--http-timeout` and `--metadata-timeout` flags
-- [ ] DX-1: Add `.golangci.yml` and `make lint` target
+- [x] RL-2: Fix dropped SSE messages with logging
+- [x] RL-3: Add `--http-timeout` and `--metadata-timeout` flags
+- [x] DX-1: Add `.golangci.yml` and `make lint` target
+- [x] Fix retry configuration not being applied to HTTP client
 
 ---
 
-### v1.6.5 — Feature Polish (Planned)
+### v1.6.6 — Feature Polish (Planned)
 
 **Theme**: User-facing feature improvements
 
@@ -561,7 +562,7 @@ Expose HTTP transport settings:
 
 ---
 
-#### v1.6.5 Milestone Checklist
+#### v1.6.6 Milestone Checklist
 
 - [ ] FE-1: Implement `--format` flag (json, pretty, csv)
 - [ ] FE-3: Add Microsoft Dataverse, D365 BC, SuccessFactors hints

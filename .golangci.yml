@@ -1,0 +1,28 @@
+# .golangci.yml - Conservative linter configuration for OData MCP Bridge
+# Local-only: NOT integrated into CI/CD pipeline
+
+run:
+  timeout: 5m
+  go: "1.21"
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck      # Check for unchecked errors
+    - govet         # Go vet examines source code for suspicious constructs
+    - staticcheck   # Advanced static analysis
+    - unused        # Check for unused code
+
+linters-settings:
+  errcheck:
+    exclude-functions:
+      - (io.Closer).Close
+      - (*os.File).Close
+      - (net/http.ResponseWriter).Write
+      - fmt.Fprint
+      - fmt.Fprintf
+      - fmt.Fprintln
+
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 3
