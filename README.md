@@ -51,6 +51,22 @@ See [CHANGELOG.md](CHANGELOG.md) for full version history.
 - **Multiple Transports**: Support for stdio (default), HTTP/SSE, and Streamable HTTP
 - **AI Foundry Compatible**: Configurable protocol version for AI Foundry and other MCP clients
 
+## Feature Status
+
+| Feature | Status | Version |
+|---------|--------|---------|
+| OData v2/v4 support | ✅ Shipped | v1.0+ |
+| SAP CSRF handling | ✅ Shipped | v1.0+ |
+| SAP GUID auto-transformation | ✅ Shipped | v1.5+ |
+| Multiple transports (stdio, HTTP/SSE, Streamable HTTP) | ✅ Shipped | v1.5+ |
+| AI Foundry protocol compatibility | ✅ Shipped | v1.5+ |
+| Credential masking | ✅ Shipped | v1.6+ |
+| Retry with exponential backoff | ✅ Shipped | v1.6+ |
+| Configurable timeouts | ✅ Shipped | v1.6.5 |
+| Lazy metadata / token optimization | 🟣 Planned | v1.7.0 |
+| Skill generator | 🟣 Planned | v1.8.0 |
+| Multi-LLM platform guides | 🟣 Planned | v2.0.0 |
+
 ## Installation
 
 ### Download Binary

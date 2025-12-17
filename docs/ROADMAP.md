@@ -775,6 +775,115 @@ func (l *Logger) Verbose(format string, args ...interface{}) {
 
 ---
 
+## Future Exploration (Parked Ideas)
+
+This section captures ideas that emerged during brainstorming but don't have a clear problem to solve yet. Revisit when user demand or pain points emerge.
+
+### FX-1: Tool Registry / Service Catalog
+
+**Concept**: Persist discovered tool definitions to disk for offline browsing and cross-session reuse.
+
+```text
+~/.odata-mcp/registry/
+  ├── northwind/
+  │   ├── tools.json        # Generated tool definitions
+  │   ├── schemas.json      # Entity schemas
+  │   └── metadata.json     # Service metadata snapshot
+  └── sap-s4hana-prod/
+      └── ...
+```
+
+**Potential benefits**:
+- Offline discovery: Browse tools without live OData connection
+- Cross-session learning: Agent remembers what worked before
+- Team sharing: Export/import service configurations
+- Schema versioning: Track changes over time
+
+**Open questions**:
+- Is this solving agent efficiency, team collaboration, or offline capability?
+- How does cache invalidation work when backend schema changes?
+- Does v1.8.0 Skill Generator already address this via generated markdown?
+
+---
+
+### FX-2: Semantic Tool Enrichment
+
+**Concept**: Enhance tool descriptions with business context beyond technical OData names.
+
+**Current**: "List/filter Products entities with OData query options"
+
+**Enhanced**: "Query product catalog including pricing, inventory levels, and supplier relationships. Common filters: CategoryID, Discontinued, UnitsInStock."
+
+**Sources for enrichment**:
+- SAP annotations in metadata (`sap:label`, `sap:quickinfo`)
+- User-provided hints (existing hint system)
+- AI-generated descriptions from schema analysis
+
+**Note**: Could be integrated into v1.8.0 Skill Generator rather than a separate feature.
+
+---
+
+### FX-3: Usage Analytics / Query Patterns
+
+**Concept**: Track what queries agents actually run to surface patterns and suggestions.
+
+**Potential insights**:
+- Which entities are accessed most?
+- What filters are commonly used?
+- Which queries fail and why?
+- "Users often filter Products by CategoryID"
+- "This entity has 1M+ rows, always use $top"
+
+**Complexity**: High — requires persistent storage, privacy considerations.
+
+---
+
+### FX-4: Multi-Service Federation
+
+**Concept**: Unified discovery and querying across multiple OData services.
+
+**Current**: Run separate bridge instances per service.
+
+**Future possibility**:
+- Single `tools/list` spanning multiple services
+- Cross-service joins: "Get orders from SAP, match with CRM contacts"
+- Smart routing: Agent says "find customer", bridge knows which service has Customers
+
+**Complexity**: High — requires service registry, conflict resolution for entity names.
+
+---
+
+### FX-5: Recipe / Workflow Library
+
+**Concept**: Predefined multi-step patterns for common tasks.
+
+```yaml
+# recipes/get-order-details.yaml
+name: Get Full Order Details
+steps:
+  1. get_Orders { key: order_id }
+  2. list_Order_Details { filter: "OrderID eq {order_id}" }
+  3. For each detail: get_Products { key: product_id }
+```
+
+**Note**: v1.8.0 Skill Generator is the seed of this — generates persistent documentation/workflows from metadata.
+
+---
+
+### FX-6: Header Forwarding / API Key Auth
+
+**Concept**: Pass custom headers (X-API-Key, X-Tenant) from MCP client to OData backend.
+
+**Use case**: OData services that use header-based authentication instead of basic/cookie auth.
+
+**Implementation sketch**:
+- `--header "X-API-Key=@ENV_VAR"` for static headers
+- `--forward-header "X-Tenant"` for pass-through from MCP HTTP requests
+
+**From consolidated review** — documented in detail there. Consider for v1.7.x or v1.8.x if user demand emerges.
+
+---
+
 ## Completed
 
 Historical record of completed work.
