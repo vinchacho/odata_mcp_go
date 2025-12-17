@@ -20,6 +20,7 @@ This document is the single source of truth for planned improvements, active dev
 | v1.7.0 | Planned | Token-Optimized Discovery |
 | v1.8.0 | Planned | Skill Generator |
 | v1.9.0 | Planned | Advanced Features |
+| v2.0.0 | Backlog | Multi-LLM Platform Support |
 
 ---
 
@@ -567,6 +568,159 @@ Expose HTTP transport settings:
 - [ ] FE-1: Implement `--format` flag (json, pretty, csv)
 - [ ] FE-3: Add Microsoft Dataverse, D365 BC, SuccessFactors hints
 - [ ] PF-1: Add connection pooling CLI flags
+
+---
+
+### v2.0.0 — Multi-LLM Platform Support (Backlog)
+
+**Theme**: Documentation and testing for the broader MCP ecosystem
+
+**Context**: As of December 2025, MCP has become the industry standard for AI tool integration. The protocol was donated to the Linux Foundation's Agentic AI Foundation (AAIF), co-founded by Anthropic, OpenAI, and Block, with support from Google, Microsoft, AWS, Cloudflare, and Bloomberg.
+
+**Key Insight**: The OData MCP Bridge already supports all required transports (stdio, HTTP/SSE, Streamable HTTP). This phase is **90% documentation** — the code already works.
+
+#### MCP Ecosystem Compatibility Matrix
+
+| Platform | MCP Support | Transport Required | Current Status |
+|----------|-------------|-------------------|----------------|
+| **Claude Desktop** | ✅ Native | stdio | ✅ Verified |
+| **Cline** (VS Code) | ✅ Native | stdio | ✅ Should work |
+| **Roo Code** (VS Code) | ✅ Native | stdio, SSE, Streamable HTTP | ✅ Should work |
+| **Cursor** | ✅ Native | stdio, SSE, Streamable HTTP | ✅ Should work |
+| **Windsurf** | ✅ Native | stdio | ✅ Should work |
+| **GitHub Copilot** (VS Code) | ✅ Native (July 2025) | stdio + remote HTTP | ✅ Should work |
+| **GitHub Copilot** (JetBrains/Eclipse/Xcode) | ✅ Native (Aug 2025) | stdio + remote HTTP | ✅ Should work |
+| **ChatGPT** (Plus/Pro/Business) | ✅ Native (Sept 2025) | HTTP/SSE, Streamable HTTP | ⚠️ Requires remote hosting |
+| **OpenAI Agents SDK** | ✅ Native | HTTP | ✅ Should work |
+| **Microsoft Copilot Studio** | ✅ Native | HTTP | Untested |
+
+#### ML-1: IDE Integration Guides (stdio-based)
+
+**Effort**: 3-4 hours | **Risk**: Low
+
+Documentation for local IDE-based MCP clients that use stdio transport.
+
+**Platforms to cover**:
+- Cline (VS Code) — configuration in VS Code settings
+- Roo Code (VS Code) — `mcp_settings.json` or `.roo/mcp.json`
+- Cursor — Cursor settings, one-click install options
+- Windsurf — Similar to Cursor
+- GitHub Copilot (local) — `.vscode/mcp.json`
+
+**File**: `docs/IDE_INTEGRATION.md` (NEW)
+
+**References**:
+- [Roo Code MCP Docs](https://docs.roocode.com/features/mcp/overview)
+- [Cline GitHub](https://github.com/cline/cline)
+- [Cursor MCP Docs](https://docs.cursor.com/context/model-context-protocol)
+
+---
+
+#### ML-2: ChatGPT Integration Guide
+
+**Effort**: 2-3 hours | **Risk**: Low
+
+ChatGPT's MCP support requires remote HTTP endpoints — cannot connect to localhost.
+
+**Documentation needed**:
+- Remote deployment options (cloud VMs, containers)
+- Tunneling setup (ngrok, Cloudflare Tunnel) for local development
+- OAuth configuration (ChatGPT supports OAuth for MCP)
+- Step-by-step connection walkthrough
+- Troubleshooting common issues
+
+**File**: `docs/CHATGPT_INTEGRATION.md` (NEW)
+
+**References**:
+- [OpenAI MCP Support Announcement](https://www.infoq.com/news/2025/10/chat-gpt-mcp/)
+- [ChatGPT Release Notes](https://help.openai.com/en/articles/6825453-chatgpt-release-notes)
+
+---
+
+#### ML-3: GitHub Copilot Integration Guide
+
+**Effort**: 2-3 hours | **Risk**: Low
+
+GitHub Copilot supports both local (stdio) and remote MCP servers.
+
+**Documentation needed**:
+- VS Code configuration
+- JetBrains/Eclipse/Xcode setup
+- Organization policy requirements (MCP disabled by default for orgs)
+- Remote server configuration for Copilot coding agent
+
+**File**: `docs/GITHUB_COPILOT_INTEGRATION.md` (NEW)
+
+**References**:
+- [MCP support in VS Code GA](https://github.blog/changelog/2025-07-14-model-context-protocol-mcp-support-in-vs-code-is-generally-available/)
+- [Extending Copilot with MCP](https://docs.github.com/copilot/customizing-copilot/using-model-context-protocol/extending-copilot-chat-with-mcp)
+
+---
+
+#### ML-4: Remote Deployment Guide
+
+**Effort**: 3-4 hours | **Risk**: Low
+
+For ChatGPT and remote Copilot scenarios requiring HTTP endpoints.
+
+**Documentation needed**:
+- Docker deployment (already have Dockerfile)
+- Cloud deployment (AWS, GCP, Azure)
+- Tunneling for local development (ngrok, Cloudflare Tunnel)
+- Reverse proxy configuration (nginx, Caddy)
+- TLS/HTTPS setup (required for production)
+- Security considerations for remote exposure
+
+**File**: `docs/REMOTE_DEPLOYMENT.md` (NEW)
+
+---
+
+#### ML-5: Authentication for Remote Transports (Optional)
+
+**Effort**: 4-6 hours | **Risk**: Medium
+
+Current HTTP transports have NO authentication. For production remote scenarios, this may be needed.
+
+**Options to evaluate**:
+- Bearer token authentication (`--http-auth-token`)
+- OAuth 2.0 support (ChatGPT uses this)
+- API key validation
+
+**Note**: Only implement if user demand warrants it. Many scenarios work with network-level security (VPN, private networks).
+
+**Files**: `internal/transport/http/auth.go` (NEW)
+
+---
+
+#### ML-6: Platform Compatibility Testing
+
+**Effort**: 4-6 hours | **Risk**: Low
+
+Verify actual compatibility with each platform.
+
+**Test matrix**:
+| Platform | Transport | Test Status |
+|----------|-----------|-------------|
+| Cline | stdio | TODO |
+| Roo Code | stdio | TODO |
+| Cursor | stdio | TODO |
+| GitHub Copilot (VS Code) | stdio | TODO |
+| ChatGPT (via ngrok) | Streamable HTTP | TODO |
+| OpenAI Agents SDK | HTTP/SSE | TODO |
+
+**Deliverable**: Verified compatibility matrix in README
+
+---
+
+#### v2.0.0 Milestone Checklist
+
+- [ ] ML-1: IDE integration guide (Cline, Roo Code, Cursor, Windsurf)
+- [ ] ML-2: ChatGPT integration guide
+- [ ] ML-3: GitHub Copilot integration guide
+- [ ] ML-4: Remote deployment guide
+- [ ] ML-5: Authentication for remote transports (if needed)
+- [ ] ML-6: Platform compatibility testing
+- [ ] Update README with "Supported Platforms" section and badges
 
 ---
 
