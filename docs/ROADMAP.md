@@ -335,58 +335,64 @@ Test message routing and tool registration in `internal/mcp/server.go`.
 
 **Theme**: ~90% token reduction for large SAP services
 
-**Goal**: Reduce token consumption through lazy metadata loading.
+**Design Document**: [docs/plans/2025-12-17-lazy-metadata-design.md](plans/2025-12-17-lazy-metadata-design.md)
 
-Current behavior loads full metadata (potentially 100+ entity sets with all properties) upfront. For large SAP services, this consumes significant tokens before the AI even starts working.
+**Problem**: For large OData services (especially SAP), eager tool generation creates significant token overhead:
+- 100+ entity sets × ~5 tools each = 500+ tools
+- Each tool definition includes name, description, and full input schema
+- Estimated 200-500 tokens per tool = **100K-250K tokens** in `tools/list` response
 
-#### New Tools
+**Solution**: Hybrid lazy mode — instead of per-entity tools, generate 10 generic tools that accept `entity_set` as a parameter.
 
-| Tool | Purpose |
-|------|---------|
-| `list_entities` | Return entity set names only (no schema) |
-| `get_entity_schema` | Load schema for specific entity on-demand |
+#### Lazy Mode Tool Set
+
+| Tool | Parameters | Description |
+|------|------------|-------------|
+| `odata_service_info` | `include_metadata?` | Service overview, entity list, function list |
+| `list_entities` | `entity_set`, `filter?`, `select?`, etc. | Generic query tool |
+| `count_entities` | `entity_set`, `filter?` | Count entities with optional filter |
+| `get_entity` | `entity_set`, `key` | Get single entity by key |
+| `get_entity_schema` | `entity_set` | Return schema (fields, types, keys, nav props) |
+| `create_entity` | `entity_set`, `data` | Create entity |
+| `update_entity` | `entity_set`, `key`, `data` | Update entity |
+| `delete_entity` | `entity_set`, `key` | Delete entity |
+| `list_functions` | (none) | List available function imports |
+| `call_function` | `function_name`, `params` | Call any function import |
+
+**Total: 10 tools** regardless of service size (vs 500+ in eager mode).
 
 #### CLI Flags
 
-```
---lazy-metadata        Enable lazy metadata loading (default: false)
---metadata-cache-ttl   Cache TTL for loaded schemas (default: 5m)
+```bash
+# Explicit opt-in
+odata-mcp --service https://... --lazy-metadata
+
+# Auto-enable if tool count exceeds threshold
+odata-mcp --service https://... --lazy-threshold 100
+
+# Environment variables
+ODATA_LAZY_METADATA=true
+ODATA_LAZY_THRESHOLD=100
 ```
 
-#### Architecture
+#### Token Math
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     LAZY LOADING FLOW                           │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  AI Request          Bridge                    OData Service    │
-│                                                                 │
-│  list_entities ──────► Return entity names ◄── Quick regex     │
-│                        from $metadata           parse           │
-│                                                                 │
-│  get_entity_schema ──► Return full schema  ◄── Parse specific  │
-│  "Products"            for Products            EntityType       │
-│                                                                 │
-│  query_Products ─────► Execute query       ◄── Normal OData    │
-│                        (schema cached)         request          │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+| Mode | Calculation | Total |
+|------|-------------|-------|
+| **Eager** | 100 entities × 5 tools × 300 tokens | ~150,000 tokens |
+| **Lazy** | 10 tools × 200 tokens | ~2,000 tokens |
+
+**Savings: ~99%**
 
 #### Milestone Checklist
 
-- [ ] Implement metadata cache (`internal/cache/metadata_cache.go`)
-- [ ] Write cache unit tests
-- [ ] Implement lazy loader (`internal/bridge/lazy_loader.go`)
-- [ ] Write lazy loader unit tests
-- [ ] Add `GetEntitySetNames()` to client
-- [ ] Modify bridge to support lazy mode
-- [ ] Add lazy mode tools (list_entities, get_entity_schema)
-- [ ] Add CLI flags for lazy loading
-- [ ] Write integration tests with Northwind
-- [ ] Update documentation (README, CHANGELOG)
-- [ ] Performance benchmarks
+- [ ] Phase 1: Add `LazyMetadata`, `LazyThreshold` to config + CLI flags
+- [ ] Phase 2: Create `internal/bridge/lazy_tools.go` (generic tool generation)
+- [ ] Phase 3: Create `internal/bridge/lazy_handlers.go` (entity_set resolution)
+- [ ] Phase 4: Add `shouldUseLazyMode()` to bridge.go, split tool generation paths
+- [ ] Phase 5: Unit tests (`lazy_tools_test.go`)
+- [ ] Phase 6: Integration tests (`lazy_mode_test.go`)
+- [ ] Phase 7: Update README, CHANGELOG
 
 ---
 
