@@ -63,7 +63,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full version history.
 | Credential masking | ✅ Shipped | v1.6+ |
 | Retry with exponential backoff | ✅ Shipped | v1.6+ |
 | Configurable timeouts | ✅ Shipped | v1.6.5 |
-| Lazy metadata / token optimization | 🟣 Planned | v1.7.0 |
+| Lazy metadata / token optimization | 🟡 Approved | v1.7.0 |
 | Skill generator | 🟣 Planned | v1.8.0 |
 | Multi-LLM platform guides | 🟣 Planned | v2.0.0 |
 
