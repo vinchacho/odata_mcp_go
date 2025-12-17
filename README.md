@@ -1,5 +1,7 @@
 # OData MCP Bridge (Go)
 
+[![DeepWiki](https://img.shields.io/badge/DeepWiki-vinchacho%2Fodata__mcp__go-blue.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNNCAxOWg0di00SDR6TTEwIDE5aDR2LThoLTR6TTE2IDE5aDR2LTEyaC00eiIvPjwvc3ZnPg==)](https://deepwiki.com/vinchacho/odata_mcp_go)
+
 A Go implementation of the OData to Model Context Protocol (MCP) bridge, providing universal access to OData services through MCP tools.
 
 This is a Go port of the Python OData-MCP bridge implementation, designed to be easier to run on different operating systems with better performance and simpler deployment. It supports both OData v2 and v4 services.
