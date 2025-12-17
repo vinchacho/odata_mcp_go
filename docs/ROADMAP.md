@@ -17,7 +17,7 @@ This document is the single source of truth for planned improvements, active dev
 | v1.6.4 | Parked | Test Coverage |
 | v1.6.5 | ✅ Complete | Reliability & DX Quick Fixes |
 | v1.6.6 | Next | Feature Polish |
-| v1.7.0 | Planned | Token-Optimized Discovery |
+| v1.7.0 | Approved | Token-Optimized Discovery |
 | v1.8.0 | Planned | Skill Generator |
 | v1.9.0 | Planned | Advanced Features |
 | v2.0.0 | Backlog | Multi-LLM Platform Support |
@@ -331,7 +331,7 @@ Test message routing and tool registration in `internal/mcp/server.go`.
 
 ---
 
-### v1.7.0 — Token-Optimized Discovery (Planned)
+### v1.7.0 — Token-Optimized Discovery (Approved)
 
 **Theme**: ~90% token reduction for large SAP services
 
