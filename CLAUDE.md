@@ -2,6 +2,37 @@
 
 This file provides guidance to Claude Code when working with this repository.
 
+## Interaction Principles (MANDATORY)
+
+**Be rigorous and constructively direct.** Apply these principles in all interactions:
+
+### Critical Thinking
+- **Stress-test ideas**: Identify flaws, edge cases, assumptions, and alternatives—explain why they matter to outcomes
+- **Challenge premature abstraction**: Call out when domain modeling is premature; suggest a walking skeleton when uncertainty is high
+- **Ground in constraints**: Pull from abstractions to concrete constraints (performance, UX, ops)
+- **Question simplicity**: Ask "simplest thing that could work?" and "what must be true for this to fail?"
+
+### Technical Rigor
+- **Default to proven solutions**: Demand justification for novelty
+- **Flag unknowns**: Identify unknowns being glossed over
+- **Use analogies carefully**: Use them briefly, then show where they break; teach transferable meta-patterns
+- **Identify thinking patterns**: When correcting, identify the thinking pattern and propose guardrails
+
+### Proactive Guidance
+- **Introduce adjacent concepts**: Proactively surface related ideas, contrarian views
+- **Occasionally flip the question**: Challenge the framing itself
+- **Adapt to mode**:
+  - Debugging → concrete, specific
+  - Learning → wide exploration
+  - Shipping → ruthless scope
+  - Architecture → test extremes
+
+### Meta-Rules
+- **Match pace**: Adapt communication density to the task
+- **Call out misuse**: Tell the user when they're using Claude wrong
+- **Override when needed**: Any rule can be overridden when context demands
+- **Optimize for**: Learning velocity AND shipping value
+
 ## Project Overview
 
 **OData MCP Bridge (Go)** — A Go binary that bridges OData v2/v4 services to the Model Context Protocol (MCP). It dynamically generates MCP tools from OData `$metadata` and serves them via stdio, HTTP/SSE, or Streamable HTTP transports.
@@ -358,6 +389,47 @@ Before completing any PR or commit:
 5. **Security change?** → Update SECURITY.md, SPEC.md
 6. **Version bump?** → Update CHANGELOG.md, README.md "What's New" section
 
+### Release Documentation Requirements (MANDATORY)
+
+**Every version release MUST have these artifacts:**
+
+| Artifact | Location | Purpose | When to Create |
+|----------|----------|---------|----------------|
+| **Design Document** | `docs/plans/YYYY-MM-DD-vX.Y.Z-*.md` | Pre-implementation spec | Before coding starts |
+| **Implementation Report** | `reports/YYYY-MM-DD-05#-*.md` | Post-implementation summary | After release |
+| **CHANGELOG Entry** | `CHANGELOG.md` | Version history | With release |
+
+**Design Document Template** (`docs/plans/`):
+- Problem Statement
+- Solution Architecture
+- CLI Interface (if applicable)
+- Files Changed
+- Acceptance Criteria
+- Risk Assessment
+- Success Metrics
+
+**Implementation Report Template** (`reports/` - category 050-099):
+- Version and date
+- Features implemented
+- Files changed with line counts
+- Test coverage
+- Known issues (if any)
+
+**Failure to create these documents = incomplete release.**
+
+### Documentation Naming Conventions
+
+```
+docs/plans/
+  YYYY-MM-DD-vX.Y.Z-feature-name-design.md    # Design docs
+
+reports/
+  YYYY-MM-DD-001-design-doc-name.md           # Design (001-049)
+  YYYY-MM-DD-050-vX.Y.Z-implementation.md     # Implementation (050-099)
+  YYYY-MM-DD-100-analysis-name.md             # Analysis (100-149)
+  YYYY-MM-DD-150-troubleshooting-name.md      # Troubleshooting (150-199)
+```
+
 ## Project Status
 
 | Feature | Status |
@@ -431,9 +503,17 @@ Examples:
 
 | File | Purpose |
 |------|---------|
-| `docs/plans/2025-12-17-lazy-metadata-design.md` | v1.7.0 Lazy Mode Design |
 | `docs/DEVELOPMENT_WORKFLOW.md` | SDD + RPI Methodology |
 | `docs/ROADMAP.md` | Roadmap and Backlog |
+
+#### Design Documents (December 2025)
+
+| File | Purpose |
+|------|---------|
+| `docs/plans/2025-12-14-v1.6.0-major-features-design.md` | v1.6.0 Major Features Design |
+| `docs/plans/2025-12-16-v1.6.3-bug-fixes-design.md` | v1.6.3 Bug Fixes Design |
+| `docs/plans/2025-12-17-v1.6.5-timeouts-sse-design.md` | v1.6.5 Timeouts/SSE Design |
+| `docs/plans/2025-12-17-lazy-metadata-design.md` | v1.7.0 Lazy Metadata Design |
 
 #### Analysis Skills Suite
 
