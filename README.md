@@ -50,6 +50,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full version history.
 - **Full MCP Compliance**: Complete protocol implementation for all MCP clients
 - **Multiple Transports**: Support for stdio (default), HTTP/SSE, and Streamable HTTP
 - **AI Foundry Compatible**: Configurable protocol version for AI Foundry and other MCP clients
+- **Lazy Metadata Mode**: Token-optimized discovery with 10 generic tools instead of per-entity tools (~95% token reduction)
 
 ## Feature Status
 
@@ -63,7 +64,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full version history.
 | Credential masking | ✅ Shipped | v1.6+ |
 | Retry with exponential backoff | ✅ Shipped | v1.6+ |
 | Configurable timeouts | ✅ Shipped | v1.6.5 |
-| Lazy metadata / token optimization | 🟡 Approved | v1.7.0 |
+| Lazy metadata / token optimization | ✅ Shipped | v1.7.0 |
 | Skill generator | 🟣 Planned | v1.8.0 |
 | Multi-LLM platform guides | 🟣 Planned | v2.0.0 |
 
@@ -669,6 +670,8 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `--retry-backoff-multiplier` | Backoff multiplier for exponential increase | `2.0` |
 | `--http-timeout` | HTTP request timeout in seconds | `30` |
 | `--metadata-timeout` | Metadata fetch timeout in seconds (useful for large SAP services) | `60` |
+| `--lazy-metadata` | Enable lazy mode: 10 generic tools instead of per-entity tools (~95% token reduction) | `false` |
+| `--lazy-threshold` | Auto-enable lazy mode when estimated tool count exceeds threshold (0=disabled) | `0` |
 
 ### Environment Variables
 
@@ -685,6 +688,8 @@ The OData MCP bridge includes a flexible hint system to provide guidance for ser
 | `ODATA_RETRY_BACKOFF_MULTIPLIER` | Backoff multiplier for exponential increase |
 | `ODATA_HTTP_TIMEOUT` | HTTP request timeout in seconds |
 | `ODATA_METADATA_TIMEOUT` | Metadata fetch timeout in seconds |
+| `ODATA_LAZY_METADATA` | Enable lazy metadata mode (true/false) |
+| `ODATA_LAZY_THRESHOLD` | Auto-enable lazy mode threshold (0=disabled) |
 
 ### .env File Support
 
@@ -719,6 +724,47 @@ Each function import is mapped to an individual tool with the function name.
 ### Service Information Tool
 
 - `odata_service_info` - Get metadata and capabilities of the OData service
+
+### Lazy Metadata Mode (Token Optimization)
+
+For large OData services with many entity sets (e.g., SAP services with 50+ entities), the default tool generation can create hundreds of tools, consuming significant LLM context. Lazy metadata mode solves this by generating 10 generic tools instead:
+
+```bash
+# Enable lazy mode explicitly
+./odata-mcp --lazy-metadata https://large-sap-service.com/odata/
+
+# Auto-enable when tool count exceeds threshold
+./odata-mcp --lazy-threshold 50 https://large-sap-service.com/odata/
+```
+
+**Lazy mode tools:**
+
+| Tool | Description |
+|------|-------------|
+| `odata_service_info` | Service overview with entity list |
+| `list_entities` | List/filter entities (requires `entity_set` parameter) |
+| `count_entities` | Count entities with optional filter |
+| `get_entity` | Get single entity by key |
+| `get_entity_schema` | Get schema (properties, types, keys) for any entity set |
+| `create_entity` | Create entity (when not read-only) |
+| `update_entity` | Update entity (when not read-only) |
+| `delete_entity` | Delete entity (when not read-only) |
+| `list_functions` | List available function imports |
+| `call_function` | Call function by name |
+
+**Token savings:** ~95% reduction (e.g., 183 tools → 10 tools for Northwind v4)
+
+**When to use lazy mode:**
+
+- Large SAP services with 50+ entity sets
+- Services where context window is limited
+- When you only need a few entity sets per session
+
+**Trade-offs:**
+
+- LLM must know entity set names (use `odata_service_info` first)
+- No per-entity schema hints in tool descriptions
+- Requires entity set name in every call
 
 ## Examples
 

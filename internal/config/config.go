@@ -76,6 +76,10 @@ type Config struct {
 	// Timeout configuration
 	HTTPTimeout     int `mapstructure:"http_timeout"`     // HTTP request timeout in seconds (default: 30)
 	MetadataTimeout int `mapstructure:"metadata_timeout"` // Metadata fetch timeout in seconds (default: 60)
+
+	// Lazy metadata mode (token optimization for large services)
+	LazyMetadata  bool `mapstructure:"lazy_metadata"`  // Enable lazy metadata mode (10 generic tools instead of per-entity)
+	LazyThreshold int  `mapstructure:"lazy_threshold"` // Auto-enable lazy mode if estimated tool count exceeds threshold (0 = disabled)
 }
 
 // HasBasicAuth returns true if username and password are configured

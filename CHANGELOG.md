@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2025-12-17
+
+### Added
+
+- **Lazy Metadata Mode** - Token-optimized discovery for large OData services
+  - New `--lazy-metadata` flag enables lazy mode with 10 generic tools instead of per-entity tools
+  - New `--lazy-threshold N` flag auto-enables lazy mode when estimated tool count exceeds threshold
+  - Environment variable support: `ODATA_LAZY_METADATA`, `ODATA_LAZY_THRESHOLD`
+  - Reduces token cost by ~95% for large services (e.g., 183 tools → 10 tools for Northwind)
+  - Generic tools accept `entity_set` parameter for dynamic entity resolution:
+    - `odata_service_info` - Get service overview with entity list
+    - `list_entities` - List/filter entities from any entity set
+    - `count_entities` - Count entities with optional filter
+    - `get_entity` - Get single entity by key
+    - `get_entity_schema` - Get schema for any entity set
+    - `create_entity` - Create entity (when not read-only)
+    - `update_entity` - Update entity (when not read-only)
+    - `delete_entity` - Delete entity (when not read-only)
+    - `list_functions` - List available function imports
+    - `call_function` - Call function by name
+  - Read-only mode generates 7 tools (excludes create/update/delete)
+  - Full validation of entity sets, keys, and capabilities before OData calls
+
 ## [1.6.5] - 2025-12-17
 
 ### Added

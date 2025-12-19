@@ -146,8 +146,100 @@ func (b *ODataMCPBridge) initialize() error {
 	return nil
 }
 
+// shouldUseLazyMode determines if lazy metadata mode should be used
+func (b *ODataMCPBridge) shouldUseLazyMode() bool {
+	// Explicit opt-in takes precedence
+	if b.config.LazyMetadata {
+		return true
+	}
+
+	// Check auto-threshold
+	if b.config.LazyThreshold > 0 {
+		estimatedTools := b.estimateToolCount()
+		if estimatedTools > b.config.LazyThreshold {
+			if b.config.Verbose {
+				fmt.Fprintf(os.Stderr, "[VERBOSE] Auto-enabling lazy mode: estimated %d tools exceeds threshold %d\n",
+					estimatedTools, b.config.LazyThreshold)
+			}
+			return true
+		}
+	}
+
+	return false
+}
+
+// estimateToolCount estimates how many tools would be generated in eager mode
+func (b *ODataMCPBridge) estimateToolCount() int {
+	count := 1 // service_info tool
+
+	for name, entitySet := range b.metadata.EntitySets {
+		if !b.shouldIncludeEntity(name) {
+			continue
+		}
+
+		// Each entity can have up to 7 tools: filter, count, search, get, create, update, delete
+		toolsPerEntity := 0
+
+		if b.config.IsOperationEnabled('F') {
+			toolsPerEntity += 2 // filter + count
+		}
+		if entitySet.Searchable && b.config.IsOperationEnabled('S') {
+			toolsPerEntity++
+		}
+		if b.config.IsOperationEnabled('G') {
+			toolsPerEntity++
+		}
+		if entitySet.Creatable && !b.config.IsReadOnly() && b.config.IsOperationEnabled('C') {
+			toolsPerEntity++
+		}
+		if entitySet.Updatable && !b.config.IsReadOnly() && b.config.IsOperationEnabled('U') {
+			toolsPerEntity++
+		}
+		if entitySet.Deletable && !b.config.IsReadOnly() && b.config.IsOperationEnabled('D') {
+			toolsPerEntity++
+		}
+
+		count += toolsPerEntity
+	}
+
+	// Add function imports
+	for name, function := range b.metadata.FunctionImports {
+		if !b.shouldIncludeFunction(name) {
+			continue
+		}
+		if !b.config.IsOperationEnabled('A') {
+			continue
+		}
+		if b.config.ReadOnly || (!b.config.AllowModifyingFunctions() && b.isFunctionModifying(function)) {
+			continue
+		}
+		count++
+	}
+
+	return count
+}
+
 // generateTools creates MCP tools based on metadata
 func (b *ODataMCPBridge) generateTools() error {
+	// Check if we should use lazy mode
+	if b.shouldUseLazyMode() {
+		if b.config.Verbose {
+			fmt.Fprintf(os.Stderr, "[VERBOSE] Using lazy metadata mode (10 generic tools)\n")
+		}
+		return b.generateLazyTools()
+	}
+
+	// Eager mode (default) - generate per-entity tools
+	if b.config.Verbose {
+		estimatedTools := b.estimateToolCount()
+		fmt.Fprintf(os.Stderr, "[VERBOSE] Using eager mode (generating ~%d tools)\n", estimatedTools)
+	}
+
+	return b.generateEagerTools()
+}
+
+// generateEagerTools creates per-entity MCP tools (original behavior)
+func (b *ODataMCPBridge) generateEagerTools() error {
 	// 1. Generate service info tool first
 	b.generateServiceInfoTool()
 

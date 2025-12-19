@@ -17,7 +17,7 @@ This document is the single source of truth for planned improvements, active dev
 | v1.6.4 | Parked | Test Coverage |
 | v1.6.5 | ✅ Complete | Reliability & DX Quick Fixes |
 | v1.6.6 | Next | Feature Polish |
-| v1.7.0 | Approved | Token-Optimized Discovery |
+| v1.7.0 | ✅ Complete | Token-Optimized Discovery |
 | v1.8.0 | Planned | Skill Generator |
 | v1.9.0 | Planned | Advanced Features |
 | v2.0.0 | Backlog | Multi-LLM Platform Support |
@@ -331,7 +331,7 @@ Test message routing and tool registration in `internal/mcp/server.go`.
 
 ---
 
-### v1.7.0 — Token-Optimized Discovery (Approved)
+### v1.7.0 — Token-Optimized Discovery ✅ COMPLETE
 
 **Theme**: ~90% token reduction for large SAP services
 
@@ -386,13 +386,13 @@ ODATA_LAZY_THRESHOLD=100
 
 #### Milestone Checklist
 
-- [ ] Phase 1: Add `LazyMetadata`, `LazyThreshold` to config + CLI flags
-- [ ] Phase 2: Create `internal/bridge/lazy_tools.go` (generic tool generation)
-- [ ] Phase 3: Create `internal/bridge/lazy_handlers.go` (entity_set resolution)
-- [ ] Phase 4: Add `shouldUseLazyMode()` to bridge.go, split tool generation paths
-- [ ] Phase 5: Unit tests (`lazy_tools_test.go`)
-- [ ] Phase 6: Integration tests (`lazy_mode_test.go`)
-- [ ] Phase 7: Update README, CHANGELOG
+- [x] Phase 1: Add `LazyMetadata`, `LazyThreshold` to config + CLI flags
+- [x] Phase 2: Create `internal/bridge/lazy_tools.go` (generic tool generation)
+- [x] Phase 3: Create `internal/bridge/lazy_handlers.go` (entity_set resolution)
+- [x] Phase 4: Add `shouldUseLazyMode()` to bridge.go, split tool generation paths
+- [x] Phase 5: Unit tests (`lazy_tools_test.go`)
+- [x] Phase 6: Integration tests (`lazy_mode_test.go`)
+- [x] Phase 7: Update README, CHANGELOG
 
 ---
 

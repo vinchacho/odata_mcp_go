@@ -131,6 +131,10 @@ func init() {
 	rootCmd.Flags().IntVar(&cfg.HTTPTimeout, "http-timeout", 30, "HTTP request timeout in seconds (default: 30)")
 	rootCmd.Flags().IntVar(&cfg.MetadataTimeout, "metadata-timeout", 60, "Metadata fetch timeout in seconds (default: 60)")
 
+	// Lazy metadata mode (token optimization)
+	rootCmd.Flags().BoolVar(&cfg.LazyMetadata, "lazy-metadata", false, "Enable lazy metadata mode: generate 10 generic tools instead of per-entity tools (reduces tokens by ~99%)")
+	rootCmd.Flags().IntVar(&cfg.LazyThreshold, "lazy-threshold", 0, "Auto-enable lazy mode if estimated tool count exceeds this threshold (0 = disabled)")
+
 	// Bind flags to viper for environment variable support
 	viper.BindPFlag("service", rootCmd.Flags().Lookup("service"))
 	viper.BindPFlag("username", rootCmd.Flags().Lookup("user"))
@@ -142,6 +146,8 @@ func init() {
 	viper.BindPFlag("retry_backoff_multiplier", rootCmd.Flags().Lookup("retry-backoff-multiplier"))
 	viper.BindPFlag("http_timeout", rootCmd.Flags().Lookup("http-timeout"))
 	viper.BindPFlag("metadata_timeout", rootCmd.Flags().Lookup("metadata-timeout"))
+	viper.BindPFlag("lazy_metadata", rootCmd.Flags().Lookup("lazy-metadata"))
+	viper.BindPFlag("lazy_threshold", rootCmd.Flags().Lookup("lazy-threshold"))
 
 	// Set up environment variable mapping
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
