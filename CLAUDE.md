@@ -6,21 +6,149 @@ This file provides guidance to Claude Code when working with this repository.
 
 **OData MCP Bridge (Go)** — A Go binary that bridges OData v2/v4 services to the Model Context Protocol (MCP). It dynamically generates MCP tools from OData `$metadata` and serves them via stdio, HTTP/SSE, or Streamable HTTP transports.
 
+## Quick Reference
+
+### Build & Test
+```bash
+go build -o odata-mcp ./cmd/odata-mcp    # Build binary
+go test ./...                             # Run unit tests
+INTEGRATION_TESTS=true go test ./...      # Include integration tests
+make dev                                  # Build + test
+make help                                 # See all targets
+```
+
+### Run Examples
+```bash
+# Basic usage
+./odata-mcp --url https://services.odata.org/V4/Northwind/Northwind.svc/
+
+# Lazy mode (10 generic tools instead of 500+)
+./odata-mcp --url $SERVICE_URL --lazy-metadata
+
+# Read-only mode
+./odata-mcp --url $SERVICE_URL --read-only
+
+# Restrict to specific entities
+./odata-mcp --url $SERVICE_URL --entities Products,Orders
+```
+
+### Configuration Priority
+**CLI flags > Environment variables > Defaults**
+
+## Configuration Reference
+
+| Flag | Env Var | Default | Description |
+|------|---------|---------|-------------|
+| `--url` | `ODATA_URL` | - | OData service URL (required) |
+| `--lazy-metadata` | `ODATA_LAZY_METADATA` | `false` | Use 10 generic tools |
+| `--lazy-threshold` | `ODATA_LAZY_THRESHOLD` | `0` | Auto-enable lazy if tools > N |
+| `--read-only` | `ODATA_READ_ONLY` | `false` | Block mutating operations |
+| `--entities` | `ODATA_ENTITIES` | - | Restrict to entity sets (comma-sep) |
+| `--enable` | `ODATA_ENABLE` | - | Enable only these ops (C,S,F,G,U,D,A,R) |
+| `--disable` | `ODATA_DISABLE` | - | Disable these ops |
+| `--transport` | `ODATA_TRANSPORT` | `stdio` | Transport: stdio, http, streamable |
+| `--port` | `ODATA_PORT` | `8080` | HTTP transport port |
+| `--protocol-version` | `ODATA_PROTOCOL_VERSION` | `2024-11-05` | MCP protocol version |
+| `--verbose` | `ODATA_VERBOSE` | `false` | Enable verbose logging |
+| `--hints` | `ODATA_HINTS` | - | Service hints file path |
+
+### Operation Codes
+| Code | Operation | Description |
+|------|-----------|-------------|
+| `C` | Create | POST new entities |
+| `S` | Search | Full-text search |
+| `F` | Filter | List/query entities |
+| `G` | Get | Read single entity |
+| `U` | Update | PATCH/PUT entities |
+| `D` | Delete | DELETE entities |
+| `A` | Actions | Function imports |
+| `R` | Raw | Direct OData queries |
+
 ## Architecture
 
 ```
-cmd/odata-mcp/main.go    # CLI entrypoint, flag parsing, transport selection
+cmd/odata-mcp/main.go       # CLI entrypoint, flag parsing, transport selection
 internal/
-  bridge/bridge.go       # Core: tool generation, OData handlers
-  mcp/server.go          # MCP protocol: initialize, tools/list, tools/call
-  client/client.go       # OData HTTP client, CSRF handling
-  transport/             # Transport implementations (stdio, http, streamable)
-  metadata/              # OData metadata parsing (v2 + v4)
-  config/config.go       # Configuration struct
-  models/models.go       # Data structures
-  constants/             # Magic strings, defaults
-  hint/hint.go           # Service hints system
-  utils/                 # Date/numeric conversions
+  bridge/
+    bridge.go               # Core: tool generation, OData handlers
+    lazy_tools.go           # Lazy mode: 10 generic tools
+    lazy_handlers.go        # Lazy mode: runtime entity validation
+  mcp/server.go             # MCP protocol: initialize, tools/list, tools/call
+  client/client.go          # OData HTTP client, CSRF handling
+  transport/                # Transport implementations (stdio, http, streamable)
+  metadata/                 # OData metadata parsing (v2 + v4)
+  config/config.go          # Configuration struct
+  models/models.go          # Data structures
+  constants/                # Magic strings, defaults
+  hint/hint.go              # Service hints system
+  utils/                    # Date/numeric conversions
+```
+
+## Key Files for Common Tasks
+
+| Task | Files |
+|------|-------|
+| Add CLI flag | `internal/config/config.go`, `cmd/odata-mcp/main.go` |
+| Add tool handler | `internal/bridge/bridge.go` |
+| Add lazy mode handler | `internal/bridge/lazy_handlers.go` |
+| Add OData operation | `internal/client/client.go` |
+| Parse new metadata | `internal/metadata/parser.go` (v2), `parser_v4.go` (v4) |
+| Add transport | `internal/transport/`, `cmd/odata-mcp/main.go` |
+| Add unit test | `internal/bridge/*_test.go`, `internal/test/*_test.go` |
+| Add integration test | `internal/test/*_test.go` (use `INTEGRATION_TESTS=true`) |
+
+## Code Patterns
+
+### Tool Handler Pattern
+
+```go
+func (b *ODataMCPBridge) handleEntityFilter(ctx context.Context, entitySet string, args map[string]interface{}) (interface{}, error) {
+    // Build query from args
+    query := b.buildFilterQuery(args)
+
+    // Execute OData request
+    result, err := b.client.Get(ctx, entitySet, query)
+    if err != nil {
+        return nil, fmt.Errorf("failed to filter %s: %w", entitySet, err)
+    }
+
+    return result, nil
+}
+```
+
+### Lazy Handler Pattern
+
+```go
+func (b *ODataMCPBridge) handleLazySomething(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+    // Extract entity_set parameter
+    entitySet, ok := args["entity_set"].(string)
+    if !ok || entitySet == "" {
+        return nil, fmt.Errorf("missing required parameter: entity_set")
+    }
+
+    // Validate entity set exists AND is allowed by filters
+    _, _, err := b.validateEntitySet(entitySet)
+    if err != nil {
+        return nil, err
+    }
+
+    // Delegate to existing handler...
+}
+```
+
+### CSRF Mutation Pattern
+
+```go
+func (c *ODataClient) Post(ctx context.Context, path string, body interface{}) (*Response, error) {
+    // Fetch CSRF token before mutation
+    token, err := c.fetchCSRFToken(ctx)
+    if err != nil {
+        return nil, fmt.Errorf("failed to fetch CSRF token: %w", err)
+    }
+
+    // Execute with token, auto-retry on 403
+    return c.doWithCSRF(ctx, "POST", path, body, token)
+}
 ```
 
 ## Build & Test Commands
@@ -120,18 +248,33 @@ make help
 | `CHANGELOG.md` | Version history |
 | `AI_FOUNDRY_COMPATIBILITY.md` | Protocol version guide |
 
+## Common Issues
+
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| CSRF 403 errors | Token expired or missing | Auto-retried; check SAP session timeout |
+| Empty tool list | Metadata fetch failed | Check `--url`, credentials, network |
+| Tools > 500 | Large OData service | Use `--lazy-metadata` or `--lazy-threshold` |
+| Entity not found | Typo or filter mismatch | Check `--entities` flag (case-sensitive) |
+| Operation not allowed | Filtered out | Check `--enable`/`--disable` flags |
+| Protocol mismatch | Wrong MCP version | Use `--protocol-version 2025-06-18` for AI Foundry |
+| Stdout contamination | Log output to stdout | All logs must go to stderr with `[VERBOSE]` |
+
 ## Security Notes
 
 - HTTP transports have NO authentication (MCP limitation)
 - Default: localhost-only binding
 - Credentials never logged
 - CSRF tokens truncated in verbose output
+- **Never commit** `.env`, credentials, or API keys
+- **Verify logs** don't contain secrets before sharing
+- Review `git log --all -p` before pushing sensitive repos
 
 ## Development Workflow (MANDATORY)
 
 **All development MUST follow the SDD + RPI methodology.** See [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.md) for full details.
 
-### Quick Reference
+### Workflow Summary
 
 ```text
 Turn 1: ARCHITECT (Spec + Research) → STOP for approval
@@ -214,3 +357,126 @@ Before completing any PR or commit:
 4. **API change?** → Update SPEC.md, AI_FOUNDRY_COMPATIBILITY.md if protocol
 5. **Security change?** → Update SECURITY.md, SPEC.md
 6. **Version bump?** → Update CHANGELOG.md, README.md "What's New" section
+
+## Project Status
+
+| Feature | Status |
+|---------|--------|
+| OData v2 Support | ✅ Complete |
+| OData v4 Support | ✅ Complete |
+| Lazy Metadata Mode | ✅ Complete (v1.7.0) |
+| SAP CSRF Handling | ✅ Complete |
+| HTTP/SSE Transport | ✅ Complete |
+| Streamable HTTP | ✅ Complete |
+| Service Hints | ✅ Complete |
+| Operation Filters | ✅ Complete |
+| Entity Filters | ✅ Complete |
+| MCP Protocol Versions | ✅ Complete |
+| AI Foundry Compatibility | ✅ Complete |
+
+## Reports and Documentation
+
+### Report Naming Convention
+
+Format: `./reports/{YYYY-MM-DD-###-title}.md`
+
+Examples:
+
+- `2025-12-17-001-lazy-metadata-design.md`
+- `2025-12-19-001-v1.7.0-implementation-complete.md`
+
+### Report Categories
+
+| Range | Category | Purpose |
+|-------|----------|---------|
+| 001-049 | Design Documents | Pre-implementation specs |
+| 050-099 | Implementation Reports | Post-implementation summaries |
+| 100-149 | Analysis & Research | Investigations, deep dives |
+| 150-199 | Troubleshooting | Issue resolution docs |
+
+### Current Reports
+
+#### Implementation Reports (050-099)
+
+| File | Purpose |
+|------|---------|
+| `reports/2025-12-19-050-v1.7.0-lazy-metadata-implementation.md` | v1.7.0 Lazy Metadata Mode |
+| `reports/2025-12-17-054-v1.6.5-timeouts-sse.md` | v1.6.5 Timeouts/SSE |
+| `reports/2025-12-16-053-v1.6.3-bug-fixes.md` | v1.6.3 Bug Fixes |
+| `reports/2025-12-14-052-v1.6.0-major-features.md` | v1.6.0 Major Features |
+| `reports/2024-06-30-051-v0.1.0-initial-implementation.md` | v0.1.0 Foundation |
+
+#### Analysis Reports (100-149)
+
+| File | Purpose |
+|------|---------|
+| `reports/2025-12-19-100-analysis-skills-suite.md` | Analysis Skills Suite |
+| `reports/2025-09-01-101-hints-system-blog-post.md` | Hints System Blog Post |
+| `reports/2025-12-01-102-e2e-strategic-guide.md` | E2E Strategic Guide |
+| `reports/2025-12-01-103-competitive-analysis.md` | Competitive Analysis |
+| `reports/2025-12-01-104-solman-hub-architecture.md` | SolMan Hub Architecture |
+
+### Current Documentation
+
+#### Strategic & Marketing
+
+| File | Purpose |
+|------|---------|
+| `docs/002-odata-mcp-september-2025-update.md` | Hints System Blog Post (engaging intro) |
+| `docs/003-odata-mcp-e2e-documentation.md` | Strategic Guide for SAP Leaders |
+| `docs/COMPETITIVE_ANALYSIS.md` | SAP MCP Ecosystem Analysis |
+| `docs/SOLMAN_HUB_ARCHITECTURE.md` | SolMan Hub Architecture Proposal |
+
+#### Development & Process
+
+| File | Purpose |
+|------|---------|
+| `docs/plans/2025-12-17-lazy-metadata-design.md` | v1.7.0 Lazy Mode Design |
+| `docs/DEVELOPMENT_WORKFLOW.md` | SDD + RPI Methodology |
+| `docs/ROADMAP.md` | Roadmap and Backlog |
+
+#### Analysis Skills Suite
+
+| File | Purpose |
+|------|---------|
+| `docs/skills/README.md` | Skills Overview & Pipeline |
+| `docs/skills/01-repo-scout.md` | Architecture Analysis |
+| `docs/skills/02-test-auditor.md` | Test Coverage Audit |
+| `docs/skills/03-debt-collector.md` | Technical Debt Harvest |
+| `docs/skills/04-reliability-reviewer.md` | Reliability/Security Review |
+| `docs/skills/05-dx-reviewer.md` | Developer Experience Review |
+| `docs/skills/06-roadmap-builder.md` | Prioritized Roadmap Builder |
+
+## Analysis Skills Usage
+
+```bash
+# Full analysis pipeline (45-75 min total)
+1. Run Repo Scout first (provides context)
+2. Run Test Auditor, Debt Collector, Reliability, DX in parallel
+3. Run Roadmap Builder with all outputs
+```
+
+See [reports/2025-12-19-100-analysis-skills-suite.md](reports/2025-12-19-100-analysis-skills-suite.md) for detailed documentation.
+
+## Legacy Documentation (Root Level)
+
+Older docs from before the current structure. Reference as needed.
+
+| File | Purpose |
+|------|---------|
+| `IMPLEMENTATION_GUIDE.md` | Original implementation walkthrough |
+| `IMPLEMENTATION_SUMMARY.md` | Implementation overview |
+| `ODATA_V4_IMPLEMENTATION.md` | OData v4 support details |
+| `SAP_DATE_HANDLING.md` | SAP date conversion logic |
+| `SAP_NUMERIC_HANDLING.md` | SAP numeric quirks |
+| `CSRF_COMPARISON.md` | CSRF handling analysis |
+| `MCP_COMPLIANCE_REPORT.md` | MCP protocol compliance |
+| `mcp_protocol_analysis.md` | Protocol analysis |
+| `FIXES_SUMMARY.md` | Historical fixes summary |
+| `ISSUE_FIXES.md` | Issue resolutions |
+| `BUG_FIX_REPORT_AAP-GO-001.md` | AAP-GO-001 bug fix |
+| `issue_9_response.md` | GitHub issue #9 response |
+| `RELEASE_NOTES.md` | General release notes |
+| `RELEASE_NOTES_v1.5.1.md` | v1.5.1 specific notes |
+| `WINDOWS_TRACE_GUIDE.md` | Windows debugging guide |
+| `WSL_TRACE_GUIDE.md` | WSL debugging guide |
