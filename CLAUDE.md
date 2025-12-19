@@ -33,6 +33,36 @@ This file provides guidance to Claude Code when working with this repository.
 - **Override when needed**: Any rule can be overridden when context demands
 - **Optimize for**: Learning velocity AND shipping value
 
+## HARD STOP: Before ANY Implementation
+
+**Before writing ANY code or documentation:**
+
+1. [ ] Did I check for applicable skills? (`superpowers:*`)
+2. [ ] Did I run brainstorming for non-trivial tasks?
+3. [ ] Did I create a design doc and STOP for approval?
+
+**If ANY answer is NO → STOP and do it now.**
+
+### Documentation = Implementation
+
+Treat documentation creation the same as code implementation:
+
+- Multi-file documentation requires design workflow
+- New guides/tutorials need brainstorming first
+- Documentation refactoring needs a plan
+
+### Complexity Check Trigger
+
+If a task involves **>1 file** OR would take **>30 minutes**:
+
+- **Workflow is MANDATORY** (brainstorming → design → implement)
+- No exceptions for "obvious" tasks
+- No shortcuts for "simple" documentation
+
+### Why This Matters
+
+Skipping workflow on "simple" tasks is how simple tasks become complex problems. The overhead of proper process is tiny compared to the cost of rework, missing requirements, or creating inconsistent documentation.
+
 ## Project Overview
 
 **OData MCP Bridge (Go)** — A Go binary that bridges OData v2/v4 services to the Model Context Protocol (MCP). It dynamically generates MCP tools from OData `$metadata` and serves them via stdio, HTTP/SSE, or Streamable HTTP transports.
@@ -506,6 +536,14 @@ Examples:
 | `docs/DEVELOPMENT_WORKFLOW.md` | SDD + RPI Methodology |
 | `docs/ROADMAP.md` | Roadmap and Backlog |
 
+#### Platform Integration Guides
+
+| File | Purpose |
+|------|---------|
+| `docs/LLM_COMPATIBILITY.md` | Master overview, compatibility matrix |
+| `docs/IDE_INTEGRATION.md` | Claude Desktop, Cline, Roo Code, Cursor, Windsurf |
+| `docs/CHAT_PLATFORM_INTEGRATION.md` | ChatGPT, GitHub Copilot |
+
 #### Design Documents (December 2025)
 
 | File | Purpose |
@@ -514,6 +552,7 @@ Examples:
 | `docs/plans/2025-12-16-v1.6.3-bug-fixes-design.md` | v1.6.3 Bug Fixes Design |
 | `docs/plans/2025-12-17-v1.6.5-timeouts-sse-design.md` | v1.6.5 Timeouts/SSE Design |
 | `docs/plans/2025-12-17-lazy-metadata-design.md` | v1.7.0 Lazy Metadata Design |
+| `docs/plans/2025-12-19-llm-compatibility-docs-design.md` | LLM Compatibility Docs Design |
 
 #### Analysis Skills Suite
 
