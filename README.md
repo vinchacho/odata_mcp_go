@@ -78,6 +78,8 @@ See [CHANGELOG.md](CHANGELOG.md) for full version history.
 | Multi-LLM platform guides | ✅ Shipped | v1.7.0 |
 | Skill generator | 🟣 Planned | v1.8.0 |
 
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the full roadmap including future exploration ideas.
+
 ## Installation
 
 ### Download Binary

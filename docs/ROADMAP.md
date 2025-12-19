@@ -17,10 +17,10 @@ This document is the single source of truth for planned improvements, active dev
 | v1.6.4 | Parked | Test Coverage |
 | v1.6.5 | ✅ Complete | Reliability & DX Quick Fixes |
 | v1.6.6 | Next | Feature Polish |
-| v1.7.0 | ✅ Complete | Token-Optimized Discovery |
+| v1.7.0 | ✅ Complete | Token-Optimized Discovery + Platform Guides |
 | v1.8.0 | Planned | Skill Generator |
 | v1.9.0 | Planned | Advanced Features |
-| v2.0.0 | Backlog | Multi-LLM Platform Support |
+| v2.0.0 | Backlog | Remote Deployment & Auth |
 
 ---
 
@@ -577,13 +577,19 @@ Expose HTTP transport settings:
 
 ---
 
-### v2.0.0 — Multi-LLM Platform Support (Backlog)
+### v2.0.0 — Remote Deployment & Authentication (Backlog)
 
-**Theme**: Documentation and testing for the broader MCP ecosystem
+**Theme**: Remote hosting and authentication for ChatGPT/external clients
 
-**Context**: As of December 2025, MCP has become the industry standard for AI tool integration. The protocol was donated to the Linux Foundation's Agentic AI Foundation (AAIF), co-founded by Anthropic, OpenAI, and Block, with support from Google, Microsoft, AWS, Cloudflare, and Bloomberg.
+**Context**: Platform integration guides shipped in v1.7.0. Remaining work focuses on remote deployment scenarios where the bridge needs to be exposed over the network (ChatGPT, enterprise deployments).
 
-**Key Insight**: The OData MCP Bridge already supports all required transports (stdio, HTTP/SSE, Streamable HTTP). This phase is **90% documentation** — the code already works.
+**What's Done (v1.7.0)**:
+
+- ✅ IDE integration guide (Cline, Roo Code, Cursor, Windsurf)
+- ✅ Chat platform guide (ChatGPT, GitHub Copilot)
+- ✅ LLM compatibility matrix
+
+**What Remains**:
 
 #### MCP Ecosystem Compatibility Matrix
 
@@ -720,9 +726,9 @@ Verify actual compatibility with each platform.
 
 #### v2.0.0 Milestone Checklist
 
-- [ ] ML-1: IDE integration guide (Cline, Roo Code, Cursor, Windsurf)
-- [ ] ML-2: ChatGPT integration guide
-- [ ] ML-3: GitHub Copilot integration guide
+- [x] ML-1: IDE integration guide (Cline, Roo Code, Cursor, Windsurf) — shipped in v1.7.0 as `docs/IDE_INTEGRATION.md`
+- [x] ML-2: ChatGPT integration guide — shipped in v1.7.0 as `docs/CHAT_PLATFORM_INTEGRATION.md`
+- [x] ML-3: GitHub Copilot integration guide — shipped in v1.7.0 as `docs/CHAT_PLATFORM_INTEGRATION.md`
 - [ ] ML-4: Remote deployment guide
 - [ ] ML-5: Authentication for remote transports (if needed)
 - [ ] ML-6: Platform compatibility testing

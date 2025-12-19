@@ -1,9 +1,9 @@
 # OData MCP Bridge (Go) — Specification
 
-**Version**: 1.1
+**Version**: 1.2
 **Status**: Approved
-**Applies to**: odata-mcp binary v1.6.x
-**Last Updated**: 2025-01-14
+**Applies to**: odata-mcp binary v1.7.x
+**Last Updated**: 2025-12-19
 
 ---
 

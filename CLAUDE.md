@@ -298,13 +298,24 @@ make help
 3. Update tool generation in `internal/bridge/bridge.go`
 4. Add query handling in `internal/client/client.go`
 
+## Documentation Hierarchy
+
+| Question | Consult |
+|----------|---------|
+| "How should this behave?" | [SPEC.md](SPEC.md) — Behavioral contracts, error handling, acceptance criteria |
+| "How do I use this tool?" | [README.md](README.md) — User guide, examples, installation |
+| "What's planned/shipped?" | [docs/ROADMAP.md](docs/ROADMAP.md) — Version history, backlog, future ideas |
+| "How should I develop features?" | [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.md) — SDD + RPI methodology |
+| "How do I work on this codebase?" | This file (CLAUDE.md) — Patterns, conventions, common tasks |
+
 ## Important Files
 
 | File | Purpose |
 |------|---------|
-| `SPEC.md` | Behavioral specification (contracts, requirements) |
-| `README.md` | User documentation |
-| `docs/ROADMAP.md` | Roadmap, backlog, and improvement tracking |
+| `SPEC.md` | Behavioral contracts, error handling, acceptance criteria |
+| `README.md` | User guide, examples, installation |
+| `docs/ROADMAP.md` | Version history, backlog, future ideas |
+| `docs/DEVELOPMENT_WORKFLOW.md` | SDD + RPI methodology |
 | `hints.json` | Default service hints (SAP workarounds) |
 | `CHANGELOG.md` | Version history |
 | `AI_FOUNDRY_COMPATIBILITY.md` | Protocol version guide |
@@ -460,13 +471,14 @@ reports/
   YYYY-MM-DD-150-troubleshooting-name.md      # Troubleshooting (150-199)
 ```
 
-## Project Status
+## Feature Status
 
 | Feature | Status |
 |---------|--------|
 | OData v2 Support | ✅ Complete |
 | OData v4 Support | ✅ Complete |
-| Lazy Metadata Mode | ✅ Complete (v1.7.0) |
+| Lazy Metadata Mode | ✅ Complete |
+| Multi-LLM Platform Guides | ✅ Complete |
 | SAP CSRF Handling | ✅ Complete |
 | HTTP/SSE Transport | ✅ Complete |
 | Streamable HTTP | ✅ Complete |
@@ -475,6 +487,8 @@ reports/
 | Entity Filters | ✅ Complete |
 | MCP Protocol Versions | ✅ Complete |
 | AI Foundry Compatibility | ✅ Complete |
+
+For version roadmap, planned features, and future exploration ideas, see [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Reports and Documentation
 
