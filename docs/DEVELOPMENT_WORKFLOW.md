@@ -4,9 +4,24 @@
 
 ---
 
+## Relationship to Superpowers Skills
+
+This methodology is **enforced via superpowers skills**:
+
+| SDD+RPI Phase      | Superpowers Skill             | This Doc Adds                          |
+|--------------------|-------------------------------|----------------------------------------|
+| Turn 1: ARCHITECT  | `superpowers:brainstorming`   | Formal SPEC sections, FR/AC numbering  |
+| Turn 2: PLANNER    | `superpowers:writing-plans`   | Traceability Matrix template           |
+| Turn 3: BUILDER    | `superpowers:executing-plans` | Brownfield Rules, Gate Checklists      |
+
+**Use superpowers skills** as the enforcement mechanism. **Use this document** for detailed section templates and checklists.
+
+---
+
 ## Overview
 
 All development follows a **strict hybrid workflow**:
+
 - **SDD** (Spec-Driven Development)
 - **RPI** (Research → Plan → Implement)
 

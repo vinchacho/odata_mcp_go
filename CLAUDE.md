@@ -38,30 +38,29 @@ This file provides guidance to Claude Code when working with this repository.
 **Before writing ANY code or documentation:**
 
 1. [ ] Did I check for applicable skills? (`superpowers:*`)
-2. [ ] Did I run brainstorming for non-trivial tasks?
+2. [ ] Did I use `superpowers:brainstorming` for non-trivial tasks?
 3. [ ] Did I create a design doc and STOP for approval?
 
-**If ANY answer is NO → STOP and do it now.**
+**If ANY answer is NO → STOP and use the skill now.**
+
+### Workflow Trigger
+
+**Use superpowers workflow when:**
+
+- Task involves >1 file
+- Task would take >30 minutes
+- Multi-file documentation changes
+- New guides/tutorials
+
+**No exceptions.** "Simple" tasks that skip workflow become complex problems.
 
 ### Documentation = Implementation
 
-Treat documentation creation the same as code implementation:
+Treat documentation creation the same as code:
 
-- Multi-file documentation requires design workflow
-- New guides/tutorials need brainstorming first
-- Documentation refactoring needs a plan
-
-### Complexity Check Trigger
-
-If a task involves **>1 file** OR would take **>30 minutes**:
-
-- **Workflow is MANDATORY** (brainstorming → design → implement)
-- No exceptions for "obvious" tasks
-- No shortcuts for "simple" documentation
-
-### Why This Matters
-
-Skipping workflow on "simple" tasks is how simple tasks become complex problems. The overhead of proper process is tiny compared to the cost of rework, missing requirements, or creating inconsistent documentation.
+- Multi-file docs → `superpowers:brainstorming` first
+- New guides → design doc + approval gate
+- Doc refactoring → `superpowers:writing-plans`
 
 ## Project Overview
 
@@ -212,30 +211,6 @@ func (c *ODataClient) Post(ctx context.Context, path string, body interface{}) (
 }
 ```
 
-## Build & Test Commands
-
-```bash
-# Build for current platform
-make build
-
-# Build for all platforms
-make build-all
-
-# Run tests
-make test
-# or
-go test ./...
-
-# Development build + test
-make dev
-
-# Check version
-make version
-
-# See all make targets
-make help
-```
-
 ## Key Conventions
 
 ### Code Style
@@ -344,37 +319,30 @@ make help
 
 ## Development Workflow (MANDATORY)
 
-**All development MUST follow the SDD + RPI methodology.** See [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.md) for full details.
+**Superpowers skills ARE the enforcement mechanism.** This project uses `superpowers:brainstorming`, `superpowers:writing-plans`, and `superpowers:executing-plans` with SDD+RPI enhancements.
 
-### Workflow Summary
+### Project-Specific Skill Enhancements
 
-```text
-Turn 1: ARCHITECT (Spec + Research) → STOP for approval
-Turn 2: PLANNER (Plan only)         → STOP for approval
-Turn 3: BUILDER (Implement)         → Deliver with traceability
-```
+When using superpowers skills in this project, apply these additions:
 
-### Hard Rules
-
-1. **NO CODING** until the Implement phase (Turn 3)
-2. **STOP at gates** - always ask for approval before proceeding
-3. **Never guess** - ask for missing inputs or mark as ASSUMPTION
-4. **Every change** must map to a requirement and acceptance criterion
-5. **Include Devil's Advocate** section at each gate
-6. **Brownfield rules** - no unrelated refactors/renames/reformatting
+| Skill | Enhancement |
+|-------|-------------|
+| `brainstorming` | Declare **Complexity Mode** (LITE/STANDARD/HEAVY) at start |
+| `brainstorming` | Include **Devil's Advocate** section before gate |
+| `brainstorming` | Gate: "Does this Spec + Research align with your understanding?" |
+| `writing-plans` | Include **Traceability Matrix** (requirement → files → tests) |
+| `writing-plans` | Gate: "Shall I proceed with Implementation?" |
+| `executing-plans` | Follow **Brownfield Rules**: no unrelated refactors, match existing patterns |
 
 ### Complexity Modes
 
-| Mode | When to Use |
-|------|-------------|
+| Mode | Criteria |
+|------|----------|
 | LITE | ≤2 files, no schema changes, minimal tests |
 | STANDARD | Multiple modules, tests required |
 | HEAVY | Cross-cutting, migrations, security/perf critical |
 
-### Gate Questions
-
-- After Turn 1: "Does this Spec + Research align with your understanding?"
-- After Turn 2: "Shall I proceed with Implementation?"
+**Full methodology:** [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.md)
 
 ## Documentation Sync Requirements (MANDATORY)
 
@@ -406,10 +374,10 @@ Turn 3: BUILDER (Implement)         → Deliver with traceability
 
 | File | Purpose |
 |------|---------|
-| `docs/SAP_DATE_HANDLING.md` | SAP date conversion logic |
-| `docs/SAP_NUMERIC_HANDLING.md` | SAP numeric quirks |
-| `docs/ODATA_V4_IMPLEMENTATION.md` | v4 support details |
-| `docs/CSRF_COMPARISON.md` | CSRF handling analysis |
+| `SAP_DATE_HANDLING.md` | SAP date conversion logic |
+| `SAP_NUMERIC_HANDLING.md` | SAP numeric quirks |
+| `ODATA_V4_IMPLEMENTATION.md` | v4 support details |
+| `CSRF_COMPARISON.md` | CSRF handling analysis |
 
 ### Configuration Files (Update when behavior changes)
 
