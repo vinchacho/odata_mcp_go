@@ -237,7 +237,7 @@ func (s *Server) handleToolsCallV2(ctx context.Context, req *Request) (*transpor
 
 ---
 
-### v1.6.4 — Test Coverage (Next)
+### v1.6.4 — Test Coverage (Parked)
 
 **Theme**: Fill critical unit test gaps
 
@@ -492,8 +492,8 @@ default:
 Current: Hardcoded 30s timeout.
 
 ```
---http-timeout duration    HTTP request timeout (default: 30s)
---metadata-timeout duration  Metadata fetch timeout (default: 10s)
+--http-timeout seconds       HTTP request timeout (default: 30)
+--metadata-timeout seconds   Metadata fetch timeout (default: 60)
 ```
 
 ---

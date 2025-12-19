@@ -145,9 +145,10 @@ Response: `{"content": [{"type":"text","text":"<JSON result>"}]}`.
 
 | Flag | Env Var | Default | Description |
 |------|---------|---------|-------------|
-| `--service` | `ODATA_SERVICE_URL`, `ODATA_URL` | (required) | OData service URL |
+| `--service` | `ODATA_SERVICE_URL`, `ODATA_URL` | (required) | OData service URL (positional argument also accepted) |
 | `-u, --user` | `ODATA_USERNAME`, `ODATA_USER` | | Basic auth username |
 | `-p, --password` | `ODATA_PASSWORD`, `ODATA_PASS` | | Basic auth password |
+| `--pass` | | | Basic auth password (alias for `--password`) |
 | `--cookie-file` | `ODATA_COOKIE_FILE` | | Netscape cookie file |
 | `--cookie-string` | `ODATA_COOKIE_STRING` | | Inline cookies |
 
@@ -206,9 +207,15 @@ Response: `{"content": [{"type":"text","text":"<JSON result>"}]}`.
 |------|---------|-------------|
 | `--legacy-dates` | true | Convert `/Date()/` to ISO |
 | `--no-legacy-dates` | false | Disable date conversion |
-| `--convert-dates-from-sap` | false | Additional SAP date handling |
 
-### 5.8 Tracing & Debugging
+### 5.8 Timeouts
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--http-timeout` | 30 | HTTP request timeout in seconds |
+| `--metadata-timeout` | 60 | Metadata fetch timeout in seconds |
+
+### 5.9 Tracing & Debugging
 
 | Flag | Description |
 |------|-------------|
@@ -218,7 +225,7 @@ Response: `{"content": [{"type":"text","text":"<JSON result>"}]}`.
 | `--trace-mcp` | Log MCP messages to temp file |
 | `--verbose-errors` | Include query options in errors |
 
-### 5.9 Hints
+### 5.10 Hints
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -264,7 +271,16 @@ Example: `filter_Products_for_NorthwSvc`
 **Tool shrink**:
 `update` → `upd`, `delete` → `del`
 
-### 6.5 Tool Schema
+### 6.5 Lazy Metadata Mode
+
+When enabled, the bridge generates a fixed set of 10 generic tools instead of per-entity tools to reduce token usage for large services.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--lazy-metadata` | false | Enable lazy metadata mode |
+| `--lazy-threshold` | 0 | Auto-enable lazy mode if estimated tool count exceeds threshold |
+
+### 6.6 Tool Schema
 
 ```json
 {
@@ -351,9 +367,10 @@ Error message includes: tool name, OData code, message, target, details.
 
 - CSRF 403: Single automatic retry with fresh token
 - HTTP 5xx errors: Configurable retry with exponential backoff (v1.6.0+)
-  - `--max-retries N` (default: 3, max: 10)
-  - `--retry-delay Ns` (default: 1s, min: 100ms, max: 30s)
-  - Backoff factor: 2x per retry
+  - `--retry-max-attempts` (default: 3)
+  - `--retry-initial-backoff-ms` (default: 100)
+  - `--retry-max-backoff-ms` (default: 10000)
+  - `--retry-backoff-multiplier` (default: 2.0)
 - Retryable errors: 500, 502, 503, 504, connection reset, timeout
 - Non-retryable: 4xx errors (except CSRF 403)
 

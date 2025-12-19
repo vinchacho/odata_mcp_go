@@ -81,37 +81,37 @@ make help                                 # See all targets
 ### Run Examples
 ```bash
 # Basic usage
-./odata-mcp --url https://services.odata.org/V4/Northwind/Northwind.svc/
+./odata-mcp https://services.odata.org/V4/Northwind/Northwind.svc/
 
 # Lazy mode (10 generic tools instead of 500+)
-./odata-mcp --url $SERVICE_URL --lazy-metadata
+./odata-mcp --service $SERVICE_URL --lazy-metadata
 
 # Read-only mode
-./odata-mcp --url $SERVICE_URL --read-only
+./odata-mcp --service $SERVICE_URL --read-only
 
 # Restrict to specific entities
-./odata-mcp --url $SERVICE_URL --entities Products,Orders
+./odata-mcp --service $SERVICE_URL --entities Products,Orders
 ```
 
 ### Configuration Priority
-**CLI flags > Environment variables > Defaults**
+**CLI flags > positional service URL > environment variables (service/auth only) > defaults**
 
 ## Configuration Reference
 
 | Flag | Env Var | Default | Description |
 |------|---------|---------|-------------|
-| `--url` | `ODATA_URL` | - | OData service URL (required) |
-| `--lazy-metadata` | `ODATA_LAZY_METADATA` | `false` | Use 10 generic tools |
-| `--lazy-threshold` | `ODATA_LAZY_THRESHOLD` | `0` | Auto-enable lazy if tools > N |
-| `--read-only` | `ODATA_READ_ONLY` | `false` | Block mutating operations |
-| `--entities` | `ODATA_ENTITIES` | - | Restrict to entity sets (comma-sep) |
-| `--enable` | `ODATA_ENABLE` | - | Enable only these ops (C,S,F,G,U,D,A,R) |
-| `--disable` | `ODATA_DISABLE` | - | Disable these ops |
-| `--transport` | `ODATA_TRANSPORT` | `stdio` | Transport: stdio, http, streamable |
-| `--port` | `ODATA_PORT` | `8080` | HTTP transport port |
-| `--protocol-version` | `ODATA_PROTOCOL_VERSION` | `2024-11-05` | MCP protocol version |
-| `--verbose` | `ODATA_VERBOSE` | `false` | Enable verbose logging |
-| `--hints` | `ODATA_HINTS` | - | Service hints file path |
+| `--service` | `ODATA_URL`, `ODATA_SERVICE_URL` | - | OData service URL (positional argument also accepted) |
+| `--lazy-metadata` | — | `false` | Use 10 generic tools |
+| `--lazy-threshold` | — | `0` | Auto-enable lazy if tools > N |
+| `--read-only` | — | `false` | Block mutating operations |
+| `--entities` | — | - | Restrict to entity sets (comma-sep) |
+| `--enable` | — | - | Enable only these ops (C,S,F,G,U,D,A,R) |
+| `--disable` | — | - | Disable these ops |
+| `--transport` | — | `stdio` | Transport: stdio, http, streamable-http |
+| `--http-addr` | — | `localhost:8080` | HTTP transport address |
+| `--protocol-version` | — | `2024-11-05` | MCP protocol version |
+| `--verbose` | — | `false` | Enable verbose logging |
+| `--hints-file` | — | `hints.json` (binary dir) | Service hints file path |
 
 ### Operation Codes
 | Code | Operation | Description |
@@ -123,7 +123,7 @@ make help                                 # See all targets
 | `U` | Update | PATCH/PUT entities |
 | `D` | Delete | DELETE entities |
 | `A` | Actions | Function imports |
-| `R` | Raw | Direct OData queries |
+| `R` | Read | Read-only ops (S+F+G) |
 
 ## Architecture
 
@@ -136,7 +136,7 @@ internal/
     lazy_handlers.go        # Lazy mode: runtime entity validation
   mcp/server.go             # MCP protocol: initialize, tools/list, tools/call
   client/client.go          # OData HTTP client, CSRF handling
-  transport/                # Transport implementations (stdio, http, streamable)
+  transport/                # Transport implementations (stdio, http, streamable-http)
   metadata/                 # OData metadata parsing (v2 + v4)
   config/config.go          # Configuration struct
   models/models.go          # Data structures
@@ -246,7 +246,7 @@ make help
 
 ### CLI Flags
 - Defined in `cmd/odata-mcp/main.go` using Cobra
-- Environment variable support via Viper with `ODATA_` prefix
+- Environment variable support for service/auth via Viper with `ODATA_` prefix
 - Mutually exclusive flags validated in `runBridge()`
 
 ### Tool Naming
@@ -314,7 +314,7 @@ make help
 | Problem | Cause | Solution |
 |---------|-------|----------|
 | CSRF 403 errors | Token expired or missing | Auto-retried; check SAP session timeout |
-| Empty tool list | Metadata fetch failed | Check `--url`, credentials, network |
+| Empty tool list | Metadata fetch failed | Check `--service`, credentials, network |
 | Tools > 500 | Large OData service | Use `--lazy-metadata` or `--lazy-threshold` |
 | Entity not found | Typo or filter mismatch | Check `--entities` flag (case-sensitive) |
 | Operation not allowed | Filtered out | Check `--enable`/`--disable` flags |
