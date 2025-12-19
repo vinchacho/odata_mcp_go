@@ -6,7 +6,17 @@ A Go implementation of the OData to Model Context Protocol (MCP) bridge, providi
 
 This is a Go port of the Python OData-MCP bridge implementation, designed to be easier to run on different operating systems with better performance and simpler deployment. It supports both OData v2 and v4 services.
 
-## 🆕 What's New (v1.6.x)
+## 🆕 What's New
+
+### v1.7.0 - Lazy Metadata & Platform Guides
+
+- **Lazy Metadata Mode**: Reduce token cost by ~95% for large OData services
+  - `--lazy-metadata` enables 10 generic tools instead of per-entity tools
+  - `--lazy-threshold N` auto-enables lazy mode when tool count exceeds threshold
+  - Perfect for SAP services with 100+ entities
+- **Multi-LLM Platform Guides**: Comprehensive integration documentation
+  - [IDE Integration](docs/IDE_INTEGRATION.md): Claude Desktop, Cline, Roo Code, Cursor, Windsurf
+  - [Chat Platforms](docs/CHAT_PLATFORM_INTEGRATION.md): ChatGPT, GitHub Copilot
 
 ### v1.6.3 - Stability & Thread Safety
 
@@ -65,8 +75,8 @@ See [CHANGELOG.md](CHANGELOG.md) for full version history.
 | Retry with exponential backoff | ✅ Shipped | v1.6+ |
 | Configurable timeouts | ✅ Shipped | v1.6.5 |
 | Lazy metadata / token optimization | ✅ Shipped | v1.7.0 |
+| Multi-LLM platform guides | ✅ Shipped | v1.7.0 |
 | Skill generator | 🟣 Planned | v1.8.0 |
-| Multi-LLM platform guides | 🟣 Planned | v2.0.0 |
 
 ## Installation
 
@@ -940,11 +950,20 @@ This project includes comprehensive security measures to prevent credential leak
 
 ## Documentation
 
+### Platform Integration
+
+- [LLM Compatibility Guide](docs/LLM_COMPATIBILITY.md) - Overview and compatibility matrix
+- [IDE Integration](docs/IDE_INTEGRATION.md) - Claude Desktop, Cline, Roo Code, Cursor, Windsurf
+- [Chat Platform Integration](docs/CHAT_PLATFORM_INTEGRATION.md) - ChatGPT, GitHub Copilot
+
+### Reference
+
 - [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Quick command reference
 - [HINTS.md](HINTS.md) - Complete guide to the service hints system
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common issues and solutions
 - [SECURITY.md](SECURITY.md) - Security considerations
 - [CHANGELOG.md](CHANGELOG.md) - Version history and changes
+- [AI_FOUNDRY_COMPATIBILITY.md](AI_FOUNDRY_COMPATIBILITY.md) - Protocol version configuration
 
 ## Contributing
 

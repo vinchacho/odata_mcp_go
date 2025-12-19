@@ -188,3 +188,10 @@ ODATA_COOKIE_STRING # Cookie string
 - Limit entity access with `--entities` flag
 - Use HTTPS for all OData services
 - HTTP transport has no authentication - use only locally
+
+## See Also
+
+- [LLM Compatibility Guide](docs/LLM_COMPATIBILITY.md) - All supported platforms
+- [IDE Integration](docs/IDE_INTEGRATION.md) - Cline, Roo Code, Cursor, Windsurf
+- [Chat Platforms](docs/CHAT_PLATFORM_INTEGRATION.md) - ChatGPT, GitHub Copilot
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Detailed issue resolution
