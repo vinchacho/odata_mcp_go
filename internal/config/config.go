@@ -80,6 +80,12 @@ type Config struct {
 	// Lazy metadata mode (token optimization for large services)
 	LazyMetadata  bool `mapstructure:"lazy_metadata"`  // Enable lazy metadata mode (10 generic tools instead of per-entity)
 	LazyThreshold int  `mapstructure:"lazy_threshold"` // Auto-enable lazy mode if estimated tool count exceeds threshold (0 = disabled)
+
+	// Header forwarding (HTTP transport only)
+	ForwardMCPHeaders bool `mapstructure:"forward_mcp_headers"` // Forward HTTP headers from MCP connection to OData service
+
+	// Universal tool mode (single tool instead of N tools per entity)
+	UniversalTool bool `mapstructure:"universal"` // Use single universal OData tool instead of per-entity tools
 }
 
 // HasBasicAuth returns true if username and password are configured
