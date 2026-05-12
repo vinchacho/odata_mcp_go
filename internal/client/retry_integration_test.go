@@ -114,7 +114,7 @@ func TestRetryWithMockServer(t *testing.T) {
 				t.Fatalf("Failed to create request: %v", err)
 			}
 
-			resp, err := client.doRequestWithRetry(req, nil)
+			resp, err := client.doRequestWithBackoff(req, nil)
 
 			// Check error expectation
 			if tt.expectError && err == nil {
@@ -194,7 +194,7 @@ func TestRetryCSRFIntegration(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	resp, err := client.doRequestWithRetry(req, nil)
+	resp, err := client.doRequestWithBackoff(req, nil)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -256,7 +256,7 @@ func TestRetryBackoffTiming(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	_, err = client.doRequestWithRetry(req, nil)
+	_, err = client.doRequestWithBackoff(req, nil)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -311,7 +311,7 @@ func TestRetryContextCancellation(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	_, err = client.doRequestWithRetry(req, nil)
+	_, err = client.doRequestWithBackoff(req, nil)
 
 	// Should get context error
 	if err == nil {
